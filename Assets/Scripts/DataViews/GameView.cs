@@ -10,11 +10,9 @@ namespace DataViews
     {
         [SerializeField] private PlayerView playerViewPrefab;
         [SerializeField] private Transform[] playerAnchors;
-        
-        // TODO: Make the draw/discard piles actually look like piles rather than only showing the top card
-        // Also give the cards a random "rotation" amount when they are added to the discard pile
-        [SerializeField] private PileView drawPileView;
-        [SerializeField] private PileView discardPileView;
+
+        [SerializeField] private DrawPileView drawPileView;
+        [SerializeField] private DiscardPileView discardPileView;
 
         private readonly List<PlayerView> _playerViews = new();
         public event Action<Player, Card> CardClicked;
@@ -37,8 +35,8 @@ namespace DataViews
             }
 
             // Initial Pile Render
-            drawPileView.RenderTop(State.DrawPile);
-            discardPileView.RenderTop(State.DiscardPile);
+            drawPileView.Render(State.DrawPile);
+            discardPileView.Render(State.DiscardPile);
         }
 
         private void OnCardClicked(Player player, Card card)
@@ -56,8 +54,8 @@ namespace DataViews
                 _playerViews[i].Render();
             }
 
-            drawPileView.RenderTop(State.DrawPile);
-            discardPileView.RenderTop(State.DiscardPile);
+            drawPileView.Render(State.DrawPile);
+            discardPileView.Render(State.DiscardPile);
         }
     }
 }

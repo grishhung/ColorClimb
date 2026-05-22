@@ -111,6 +111,7 @@ namespace DataClasses.BusinessLayer
         private void InitializeDiscardPile()
         {
             var firstCard = _state.DrawPile.Draw();
+            firstCard.IsStartingCard = true;
             _state.DiscardPile.Add(firstCard);
             _state.ActiveSuit = firstCard.Suit;
         }
@@ -119,26 +120,26 @@ namespace DataClasses.BusinessLayer
         {
             foreach (var suit in SuitUtils.GetNormalSuits())
             {
-                drawPile.Add(new Card(suit, Rank.Number7, new SwapHandsEffect()));
+                drawPile.Add(new Card(suit, Rank.Number7, false, new SwapHandsEffect()));
 
                 for (var i = 0; i < 2; i++)
                 {
-                    drawPile.Add(new Card(suit, Rank.Number1));
-                    drawPile.Add(new Card(suit, Rank.Number2));
-                    drawPile.Add(new Card(suit, Rank.Number3));
-                    drawPile.Add(new Card(suit, Rank.Number4));
-                    drawPile.Add(new Card(suit, Rank.Number5));
-                    drawPile.Add(new Card(suit, Rank.Number6));
-                    drawPile.Add(new Card(suit, Rank.Number8));
-                    drawPile.Add(new Card(suit, Rank.Number9));
+                    drawPile.Add(new Card(suit, Rank.Number1, false));
+                    drawPile.Add(new Card(suit, Rank.Number2, false));
+                    drawPile.Add(new Card(suit, Rank.Number3, false));
+                    drawPile.Add(new Card(suit, Rank.Number4, false));
+                    drawPile.Add(new Card(suit, Rank.Number5, false));
+                    drawPile.Add(new Card(suit, Rank.Number6, false));
+                    drawPile.Add(new Card(suit, Rank.Number8, false));
+                    drawPile.Add(new Card(suit, Rank.Number9, false));
 
-                    drawPile.Add(new Card(suit, Rank.Number0, new RotateHandsEffect()));
+                    drawPile.Add(new Card(suit, Rank.Number0, false, new RotateHandsEffect()));
 
                     // TODO: Make Draw 2 cards skip the player's turn
                     // unless they can also play a draw 2 and stack the draw amount
-                    drawPile.Add(new Card(suit, Rank.Draw2, new DrawEffect(2)));
-                    drawPile.Add(new Card(suit, Rank.Reverse, new ReverseEffect()));
-                    drawPile.Add(new Card(suit, Rank.Skip, new SkipEffect()));
+                    drawPile.Add(new Card(suit, Rank.Draw2, false, new DrawEffect(2)));
+                    drawPile.Add(new Card(suit, Rank.Reverse, false, new ReverseEffect()));
+                    drawPile.Add(new Card(suit, Rank.Skip, false, new SkipEffect()));
                 }
             }
 
@@ -146,8 +147,8 @@ namespace DataClasses.BusinessLayer
             {
                 // TODO: Make Draw 4 cards skip the player's turn
                 // unless they can also play a draw 4 and stack the draw amount
-                drawPile.Add(new Card(Suit.Wild, Rank.Wild, new WildEffect()));
-                drawPile.Add(new Card(Suit.Wild, Rank.WildDraw4, new WildEffect(), new DrawEffect(4)));
+                drawPile.Add(new Card(Suit.Wild, Rank.Wild, false, new WildEffect()));
+                drawPile.Add(new Card(Suit.Wild, Rank.WildDraw4, false, new WildEffect(), new DrawEffect(4)));
             }
         }
         

@@ -1,0 +1,100 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using DataClasses.CardPiles;
+using UnityEngine;
+using Random = System.Random;
+
+namespace DataViews
+{
+    public class DiscardPileView : MonoBehaviour
+    {
+        [SerializeField] private CardView cardPrefab;
+        [SerializeField] private Transform spawnPoint;
+        
+        [SerializeField] private int maxCards = 16;
+        [SerializeField] private float individualSpacing = 0.01f;
+        
+        [SerializeField] private float maxRotation = 45f;
+        [SerializeField] private float maxDisplacement = 0.25f;
+        
+        private readonly List<CardView> _cardViews = new();
+
+        public void Render(CardPile pile)
+        {
+            Clear();
+            
+            foreach (var card in pile.Cards.TakeLast(maxCards).ToList())
+            {
+                var cardView = Instantiate(cardPrefab, spawnPoint);
+                cardView.Bind(card);
+                _cardViews.Add(cardView);
+            }
+
+            Layout();
+        }
+        
+        private void Layout()
+        {
+            if (_cardViews.Count == 0)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _cardViews.Count; i++)
+            {
+                var cardView = _cardViews[i];
+                var cardViewTransform = cardView.transform;
+
+                var rand = GetSeededRand(cardView.Card.Guid);
+                var rotation = GetSeededRotation(rand);
+
+                if (!cardView.Card.IsStartingCard)
+                {
+                    var angle = GetSeededAngle(rand);
+                    var displacementX = Mathf.Cos(angle) * maxDisplacement;;
+                    var displacementZ =  Mathf.Sin(angle) * maxDisplacement;
+                    cardViewTransform.position += new Vector3(displacementX, 0, displacementZ);
+                }
+                
+                cardViewTransform.position += new Vector3(0, individualSpacing * i, 0);
+                cardViewTransform.eulerAngles += Vector3.up * rotation;
+                
+                // Need to set this otherwise the card will vanish on mouse hover
+                cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
+                cardView.SetDimmed(i < _cardViews.Count -1);
+                cardView.SetCanHover(i == _cardViews.Count -1);
+            }
+        }
+        
+        private void Clear()
+        {
+            foreach (var view in _cardViews)
+            {
+                Destroy(view.gameObject);
+            }
+
+            _cardViews.Clear();
+        }
+
+        // Returns value from -1 to 1
+        private Random GetSeededRand(Guid guid)
+        {
+            var guidBytes = guid.ToByteArray();
+            var seed = BitConverter.ToInt32(guidBytes, 0);
+            return new Random(seed);
+        }
+        
+        private float GetSeededRotation(Random rand)
+        {
+            var randomFloat = (float) rand.NextDouble();
+            return (randomFloat * 2f - 1f) * maxRotation;
+        }
+        
+        private float GetSeededAngle(Random rand)
+        {
+            var randomFloat = (float) rand.NextDouble();
+            return randomFloat * 2f * Mathf.PI;
+        }
+    }
+}

@@ -13,6 +13,7 @@ namespace DataViews
         
         private Color _baseColor;
         private bool _isDimmed;
+        private bool _canHover;
         
         private Vector3 _basePosition;
         private Vector3 _baseScale;
@@ -31,6 +32,11 @@ namespace DataViews
 
         private void OnMouseEnter()
         {
+            if (!_canHover)
+            {
+                return;
+            }
+
             // TODO: Add edge highlighting as well and dimming for illegal cards
             // Make it so that if a card can be used to jump in, it's not dimmed
             
@@ -46,12 +52,22 @@ namespace DataViews
 
         private void OnMouseExit()
         {
+            if (!_canHover)
+            {
+                return;
+            }
+
             ApplyColor();
             ApplyPositionAndScale();
         }
         
         private void OnMouseDown()
         {
+            if (!_canHover)
+            {
+                return;
+            }
+
             Clicked?.Invoke(this);
         }
         
@@ -113,6 +129,11 @@ namespace DataViews
         {
             gameObject.transform.localPosition = _basePosition;
             gameObject.transform.localScale = _baseScale;
+        }
+        
+        public void SetCanHover(bool canHover)
+        {
+            _canHover = canHover;
         }
         
         public void SetDimmed(bool dimmed)

@@ -14,7 +14,9 @@ namespace DataClasses.BusinessLayer
 
             // Wilds always playable
             if (card.Rank is Rank.Wild or Rank.WildDraw4)
+            {
                 return true;
+            }
 
             // Match against active suit OR rank match
             // Any card can be played after a wild card

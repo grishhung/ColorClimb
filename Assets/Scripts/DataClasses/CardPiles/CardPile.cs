@@ -37,8 +37,10 @@ namespace DataClasses.CardPiles
         {
             for (var i = 0; i < _cards.Count; i++)
             {
-                var randomIndex = Random.Range(i, _cards.Count);
+                // Reset the starting card since shuffling screws with the order
+                _cards[i].IsStartingCard = false;
 
+                var randomIndex = Random.Range(i, _cards.Count);
                 (_cards[i], _cards[randomIndex]) = (_cards[randomIndex], _cards[i]);
             }
         }

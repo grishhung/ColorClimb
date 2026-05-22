@@ -20,6 +20,7 @@ namespace DataViews
         
         private readonly List<CardView> _cardViews = new();
         private bool _isDimmed;
+
         public void Render(CardPile hand)
         {
             Clear();
@@ -67,6 +68,7 @@ namespace DataViews
                 _cardViews[i].transform.localPosition = new Vector3(-x, 0, z);
                 _cardViews[i].transform.localEulerAngles = new Vector3(0, angle, cardTilt);
                 _cardViews[i].SetRestState(_cardViews[i].transform.localPosition, _cardViews[i].transform.localScale);
+                _cardViews[i].SetCanHover(true);
             }
         }
 
