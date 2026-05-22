@@ -1,0 +1,126 @@
+# =========================
+# Unity Generated Folders
+# =========================
+
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Asset meta data should stay tracked
+!*.meta
+
+# =========================
+# Addressables
+# =========================
+
+ServerData/
+
+# =========================
+# Visual Studio / Rider
+# =========================
+
+.vs/
+.idea/
+.gradle/
+
+ExportedObj/
+.consulo/
+
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Rider
+*.DotSettings.user
+
+# VSCode
+.vscode/
+
+# =========================
+# macOS
+# =========================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in external disks
+.Spotlight-V100
+.Trashes
+
+# =========================
+# Crash Reports
+# =========================
+
+sysinfo.txt
+
+# =========================
+# Unity Auto-generated
+# =========================
+
+Assets/AssetStoreTools*
+
+# =========================
+# Builds / Executables
+# =========================
+
+*.apk
+*.aab
+*.unitypackage
+
+# Optional:
+# Ignore exported game builds
+Builds/
+Build/
+
+# =========================
+# Large Binary Files
+# (If NOT using Git LFS)
+# =========================
+
+# Uncomment if desired
+
+# *.psd
+# *.blend
+# *.wav
+# *.mp4
+# *.mov
+# *.zip
+
+# =========================
+# JetBrains Rider
+# =========================
+
+.idea/
+
+# =========================
+# Burst / DOTS
+# =========================
+
+[Bb]urstDebugInformation_DoNotShip/
+
+# =========================
+# Generated Lighting
+# =========================
+
+GIBackup/
