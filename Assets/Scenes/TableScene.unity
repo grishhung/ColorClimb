@@ -882,6 +882,8 @@ MonoBehaviour:
   cardPrefab: {fileID: 2929632381950408189, guid: 1b5bbc0ce05b147f5a20d456f1185ba0, type: 3}
   spawnPoint: {fileID: 118079662}
   individualSpacing: 0.01
+  floatingCardSpacing: 0.2
+  pendingDrawLift: 0.5
 --- !u!4 &1948337860
 Transform:
   m_ObjectHideFlags: 0

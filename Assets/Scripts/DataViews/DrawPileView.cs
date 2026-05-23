@@ -11,15 +11,21 @@ namespace DataViews
         [SerializeField] private Transform spawnPoint;
 
         [SerializeField] private float individualSpacing = 0.01f;
-        
-        private readonly List<CardView> _cardViews = new();
+        [SerializeField] private float floatingCardSpacing = 0.2f;
+        [SerializeField] private float pendingDrawLift = 0.5f;
 
+        private readonly List<CardView> _cardViews = new();
+        private int _pendingDrawCount;
+
+        // Fired when the player clicks the top card of the draw pile
         public event Action DrawPileClicked;
 
-        public void Render(CardPile pile)
+        public void Render(CardPile pile, int pendingDrawCount = 0)
         {
+            _pendingDrawCount = pendingDrawCount;
+
             Clear();
-            
+
             foreach (var card in pile.Cards)
             {
                 var cardView = Instantiate(cardPrefab, spawnPoint);
@@ -29,7 +35,7 @@ namespace DataViews
 
             Layout();
         }
-        
+
         private void Layout()
         {
             if (_cardViews.Count == 0)
@@ -37,22 +43,58 @@ namespace DataViews
                 return;
             }
 
+            var floatStartIndex = Mathf.Max(0, _cardViews.Count - _pendingDrawCount);
+
             for (var i = 0; i < _cardViews.Count; i++)
             {
                 var cardView = _cardViews[i];
                 var cardViewTransform = cardView.transform;
-                
-                cardViewTransform.position += new Vector3(0, individualSpacing * i, 0);
-                
-                // Need to set this otherwise the card will vanish on mouse hover
+
+                float yOffset;
+                var isFloating = i >= floatStartIndex;
+
+                if (isFloating)
+                {
+                    var floatingIndex = i - floatStartIndex;
+                    yOffset = individualSpacing * floatStartIndex
+                            + pendingDrawLift
+                            + floatingCardSpacing * floatingIndex;
+                }
+                else
+                {
+                    yOffset = individualSpacing * i;
+                }
+
+                cardViewTransform.position += new Vector3(0, yOffset, 0);
+
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
+                cardView.SetDimmed(_pendingDrawCount > 0 && !isFloating && i == floatStartIndex - 1);
                 cardView.SetCanHover(i == _cardViews.Count - 1);
+            }
+
+            // When the top card is hovered, mirror the hover state onto all other floating cards
+            if (_pendingDrawCount > 1 && floatStartIndex < _cardViews.Count - 1)
+            {
+                var topCard = _cardViews[^1];
+                var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - 1 - floatStartIndex);
+
+                topCard.MouseEntered += () =>
+                {
+                    foreach (var card in floatingCards)
+                        card.SetHoverState(true);
+                };
+
+                topCard.MouseExited += () =>
+                {
+                    foreach (var card in floatingCards)
+                        card.SetHoverState(false);
+                };
             }
 
             // Wire the top card's click up to our own event
             _cardViews[^1].Clicked += _ => DrawPileClicked?.Invoke();
         }
-        
+
         private void Clear()
         {
             foreach (var view in _cardViews)

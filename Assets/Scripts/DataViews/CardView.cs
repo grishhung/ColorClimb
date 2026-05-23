@@ -20,6 +20,8 @@ namespace DataViews
 
         public Card Card { get; private set; }
         public event Action<CardView> Clicked;
+        public event Action MouseEntered;
+        public event Action MouseExited;
 
         public void Bind(Card card)
         {
@@ -37,17 +39,8 @@ namespace DataViews
                 return;
             }
 
-            // TODO: Add edge highlighting as well and dimming for illegal cards
-            // Make it so that if a card can be used to jump in, it's not dimmed
-            
-            bodyRenderer.material.color = _baseColor * (_isDimmed ? 0.5f : 1f) * 1.25f;
-            label.color = Color.white * (_isDimmed ? 0.5f : 1f);
-            
-            // Make the card easier to view
-            gameObject.transform.localPosition = _basePosition + Vector3.up * 0.5f;
-            gameObject.transform.localScale = _baseScale * 1.25f;
-            
-            // TODO: Create real tooltip functionality using GetDescription()
+            ApplyHoverVisuals();
+            MouseEntered?.Invoke();
         }
 
         private void OnMouseExit()
@@ -57,8 +50,8 @@ namespace DataViews
                 return;
             }
 
-            ApplyColor();
-            ApplyPositionAndScale();
+            ApplyRestVisuals();
+            MouseExited?.Invoke();
         }
         
         private void OnMouseDown()
@@ -70,7 +63,38 @@ namespace DataViews
 
             Clicked?.Invoke(this);
         }
-        
+
+        /// <summary>
+        /// Applies hover visuals from outside — used to group-hover cards that aren't
+        /// directly under the mouse (e.g. the pending draw block beneath the top card).
+        /// </summary>
+        public void SetHoverState(bool hovered)
+        {
+            if (hovered)
+                ApplyHoverVisuals();
+            else
+                ApplyRestVisuals();
+        }
+
+        private void ApplyHoverVisuals()
+        {
+            // TODO: Add edge highlighting as well and dimming for illegal cards
+            // Make it so that if a card can be used to jump in, it's not dimmed
+            bodyRenderer.material.color = _baseColor * (_isDimmed ? 0.5f : 1f) * 1.25f;
+            label.color = Color.white * (_isDimmed ? 0.5f : 1f);
+
+            gameObject.transform.localPosition = _basePosition + Vector3.up * 0.5f;
+            gameObject.transform.localScale = _baseScale * 1.25f;
+
+            // TODO: Create real tooltip functionality using GetDescription()
+        }
+
+        private void ApplyRestVisuals()
+        {
+            ApplyColor();
+            ApplyPositionAndScale();
+        }
+
         private static Color GetSuitColor(Suit suit)
         {
             return suit switch

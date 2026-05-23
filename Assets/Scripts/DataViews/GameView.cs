@@ -39,7 +39,7 @@ namespace DataViews
             drawPileView.DrawPileClicked += OnDrawPileClicked;
 
             // Initial pile render
-            drawPileView.Render(_state.DrawPile);
+            drawPileView.Render(_state.DrawPile, _state.PendingDrawCount);
             discardPileView.Render(_state.DiscardPile);
         }
 
@@ -61,7 +61,7 @@ namespace DataViews
                 playerView.Render();
             }
 
-            drawPileView.Render(_state.DrawPile);
+            drawPileView.Render(_state.DrawPile, _state.PendingDrawCount);
             discardPileView.Render(_state.DiscardPile);
         }
     }
