@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace DataClasses.CardPiles
@@ -22,13 +21,13 @@ namespace DataClasses.CardPiles
 
         public Card Draw()
         {
-            if (Cards.Count == 0)
+            if (_cards.Count == 0)
             {
                 return null;
             }
 
-            var topCard = Cards[0];
-            _cards.RemoveAt(0);
+            var topCard = _cards[^1];
+            _cards.RemoveAt(_cards.Count - 1);
 
             return topCard;
         }
@@ -37,12 +36,22 @@ namespace DataClasses.CardPiles
         {
             for (var i = 0; i < _cards.Count; i++)
             {
-                // Reset the starting card since shuffling screws with the order
+                // Reset the starting card flag since shuffling screws with the order
                 _cards[i].IsStartingCard = false;
 
                 var randomIndex = Random.Range(i, _cards.Count);
                 (_cards[i], _cards[randomIndex]) = (_cards[randomIndex], _cards[i]);
             }
+        }
+
+        protected void RemoveAllExceptLast()
+        {
+            if (_cards.Count <= 1)
+            {
+                return;
+            }
+
+            _cards.RemoveRange(0, _cards.Count - 1);
         }
     }
 }

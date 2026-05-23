@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DataClasses.CardPiles;
 using UnityEngine;
@@ -12,6 +13,8 @@ namespace DataViews
         [SerializeField] private float individualSpacing = 0.01f;
         
         private readonly List<CardView> _cardViews = new();
+
+        public event Action DrawPileClicked;
 
         public void Render(CardPile pile)
         {
@@ -43,8 +46,11 @@ namespace DataViews
                 
                 // Need to set this otherwise the card will vanish on mouse hover
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
-                cardView.SetCanHover(i == _cardViews.Count -1);
+                cardView.SetCanHover(i == _cardViews.Count - 1);
             }
+
+            // Wire the top card's click up to our own event
+            _cardViews[^1].Clicked += _ => DrawPileClicked?.Invoke();
         }
         
         private void Clear()

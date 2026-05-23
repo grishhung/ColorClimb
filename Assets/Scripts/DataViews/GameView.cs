@@ -15,7 +15,9 @@ namespace DataViews
         [SerializeField] private DiscardPileView discardPileView;
 
         private readonly List<PlayerView> _playerViews = new();
+
         public event Action<Player, Card> CardClicked;
+        public event Action DrawPileClicked;
 
         private GameState _state;
 
@@ -34,7 +36,9 @@ namespace DataViews
                 _playerViews.Add(view);
             }
 
-            // Initial Pile Render
+            drawPileView.DrawPileClicked += OnDrawPileClicked;
+
+            // Initial pile render
             drawPileView.Render(_state.DrawPile);
             discardPileView.Render(_state.DiscardPile);
         }
@@ -42,6 +46,11 @@ namespace DataViews
         private void OnCardClicked(Player player, Card card)
         {
             CardClicked?.Invoke(player, card);
+        }
+
+        private void OnDrawPileClicked()
+        {
+            DrawPileClicked?.Invoke();
         }
 
         public void Refresh()

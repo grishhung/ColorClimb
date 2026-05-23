@@ -31,6 +31,7 @@ namespace DataClasses.BusinessLayer
 
             gameView.Bind(_state);
             gameView.CardClicked += TryPlayCard;
+            gameView.DrawPileClicked += TryDrawCard;
 
             gameView.Refresh();
 
@@ -68,9 +69,36 @@ namespace DataClasses.BusinessLayer
             
             Debug.Log($"Player played {card}");
         }
-        
-        // TODO: Implement TryDrawCard() or something along those lines
-        // Currently the game is softlocked if the player cannot draw a card
+
+        private void TryDrawCard()
+        {
+            var currentPlayer = _state.Players[_state.CurrentPlayerIndex];
+
+            // TODO: Uncomment the following for when we implement a "reshuffle" (lives) system
+            
+            // // Try to refill the draw pile from the discard pile if it's empty.
+            // // Always keep the top discard card in place.
+            // if (_state.DrawPile.Cards.Count == 0)
+            // {
+            //     if (_state.DiscardPile.Cards.Count <= 1)
+            //     {
+            //         Debug.Log("Draw pile and discard pile are both empty — cannot draw");
+            //         return;
+            //     }
+            //
+            //     _state.DrawPile.RefillFromDiscard(_state.DiscardPile);
+            //     Debug.Log("Draw pile exhausted — reshuffled discard pile");
+            // }
+
+            // For now, we're drawing one card at a time and not advancing the turn until a card can be played
+            var drawnCard = _state.DrawPile.Draw();
+            currentPlayer.Hand.Add(drawnCard);
+            
+            UpdateShaderGlobals();
+            gameView.Refresh();
+
+            Debug.Log($"Player drew {drawnCard}");
+        }
 
         private void AdvanceTurn()
         {
