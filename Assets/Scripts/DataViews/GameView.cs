@@ -16,27 +16,27 @@ namespace DataViews
 
         private readonly List<PlayerView> _playerViews = new();
         public event Action<Player, Card> CardClicked;
-        
-        public GameState State;
+
+        private GameState _state;
 
         public void Bind(GameState state)
         {
-            State = state;
+            _state = state;
 
             for (var i = 0; i < state.Players.Count; i++)
             {
                 var player = state.Players[i];
                 var view = Instantiate(playerViewPrefab, playerAnchors[i]);
 
-                view.Bind(player);
+                view.Bind(player, _state);
                 view.CardClicked += OnCardClicked;
 
                 _playerViews.Add(view);
             }
 
             // Initial Pile Render
-            drawPileView.Render(State.DrawPile);
-            discardPileView.Render(State.DiscardPile);
+            drawPileView.Render(_state.DrawPile);
+            discardPileView.Render(_state.DiscardPile);
         }
 
         private void OnCardClicked(Player player, Card card)
@@ -46,16 +46,14 @@ namespace DataViews
 
         public void Refresh()
         {
-            for (var i = 0; i < _playerViews.Count; i++)
+            foreach (var playerView in _playerViews)
             {
-                var isActive = i == State.CurrentPlayerIndex;
-
-                _playerViews[i].SetDimmed(!isActive);
-                _playerViews[i].Render();
+                playerView.ApplyCurrentDimState();
+                playerView.Render();
             }
 
-            drawPileView.Render(State.DrawPile);
-            discardPileView.Render(State.DiscardPile);
+            drawPileView.Render(_state.DrawPile);
+            discardPileView.Render(_state.DiscardPile);
         }
     }
 }

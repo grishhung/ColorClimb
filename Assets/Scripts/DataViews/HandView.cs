@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
 using UnityEngine;
 
@@ -19,13 +20,12 @@ namespace DataViews
         public event Action<Card> CardClicked;
         
         private readonly List<CardView> _cardViews = new();
-        private bool _isDimmed;
 
-        public void Render(CardPile hand)
+        public void Render(Player player, GameState state)
         {
             Clear();
             
-            var cards = GetSortedCards(hand);
+            var cards = GetSortedCards(player.Hand);
 
             foreach (var card in cards)
             {
@@ -36,7 +36,7 @@ namespace DataViews
             }
 
             Layout();
-            ApplyCurrentDimState();
+            ApplyCurrentDimState(player, state);
         }
         
         
@@ -88,17 +88,11 @@ namespace DataViews
             return hand.Cards.OrderBy(c => c.Suit).ThenBy(c => c.Rank);
         }
         
-        public void SetDimmed(bool dimmed)
+        public void ApplyCurrentDimState(Player player, GameState state)
         {
-            _isDimmed = dimmed;
-            ApplyCurrentDimState();
-        }
-
-        private void ApplyCurrentDimState()
-        {
-            foreach (var view in _cardViews)
+            foreach (var cardView in _cardViews)
             {
-                view.SetDimmed(_isDimmed);
+                cardView.SetDimmed(!GameRules.CanPlay(player, cardView.Card, state));
             }
         }
     }

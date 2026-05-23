@@ -39,21 +39,29 @@ namespace DataClasses.BusinessLayer
 
         private void TryPlayCard(Player player, Card card)
         {
-            // Turn enforcement
-            if (_state.Players[_state.CurrentPlayerIndex] != player)
-            {
-                Debug.Log("Not your turn");
-                return;
-            }
-
-            // Rule check (now includes ActiveSuit)
-            if (!GameRules.CanPlay(card, _state.TopDiscard, _state.ActiveSuit))
+            // Rule check
+            if (!GameRules.CanPlay(player, card, _state))
             {
                 Debug.Log("Illegal move");
                 return;
             }
 
             GameRules.PlayCard(_state, player, card);
+            
+            // Always switch the turn to the correct person
+            // (e.g., in the case of a jump-in)
+            while (true)
+            {
+                if (_state.Players[_state.CurrentPlayerIndex] != player)
+                {
+                    AdvanceTurn();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
             AdvanceTurn();
             UpdateShaderGlobals();
             gameView.Refresh();
@@ -69,7 +77,7 @@ namespace DataClasses.BusinessLayer
             var skips = _state.SkipCount;
             _state.SkipCount = 0;
 
-            for (int i = 0; i < skips + 1; i++)
+            for (var i = 0; i < skips + 1; i++)
             {
                 _state.CurrentPlayerIndex = GetNextPlayerIndex();
             }
@@ -77,16 +85,12 @@ namespace DataClasses.BusinessLayer
 
         private int GetNextPlayerIndex()
         {
-            int count = _state.Players.Count;
+            var count = _state.Players.Count;
 
             return _state.Direction switch
             {
-                GameplayDirection.Clockwise =>
-                    (_state.CurrentPlayerIndex + 1) % count,
-
-                GameplayDirection.CounterClockwise =>
-                    (_state.CurrentPlayerIndex - 1 + count) % count,
-
+                GameplayDirection.Clockwise => (_state.CurrentPlayerIndex + 1) % count,
+                GameplayDirection.CounterClockwise => (_state.CurrentPlayerIndex - 1 + count) % count,
                 _ => _state.CurrentPlayerIndex
             };
         }

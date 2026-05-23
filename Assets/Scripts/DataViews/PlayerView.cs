@@ -10,11 +10,14 @@ namespace DataViews
         [SerializeField] private HandView handView;
 
         private Player _player;
+        private GameState _state;
+
         public event Action<Player, Card> CardClicked;
 
-        public void Bind(Player player)
+        public void Bind(Player player, GameState state)
         {
             _player = player;
+            _state = state;
             handView.CardClicked += OnCardClicked;
             Render();
         }
@@ -26,12 +29,12 @@ namespace DataViews
 
         public void Render()
         {
-            handView.Render(_player.Hand);
+            handView.Render(_player, _state);
         }
         
-        public void SetDimmed(bool dimmed)
+        public void ApplyCurrentDimState()
         {
-            handView.SetDimmed(dimmed);
+            handView.ApplyCurrentDimState(_player, _state);
         }
     }
 }

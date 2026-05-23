@@ -1,17 +1,32 @@
 using DataClasses.CardPiles;
 using DataClasses.Enums;
+using UnityEngine;
 
 namespace DataClasses.BusinessLayer
 {
     public static class GameRules
     {
-        public static bool CanPlay(Card card, Card topCard, Suit activeSuit)
+        public static bool CanPlay(Player player, Card card, GameState state)
         {
-            if (card == null || topCard == null)
+            if (card == null || state.TopDiscard == null)
             {
                 return false;
             }
 
+            // Identical cards can always be played regardless of turn order ("jump-ins")
+            if (card.Rank == state.TopDiscard.Rank && card.Suit == state.TopDiscard.Suit)
+            {
+                Debug.Log("Jump-in allowed");
+                return true;
+            }
+            
+            // Turn enforcement
+            if (state.Players[state.CurrentPlayerIndex] != player)
+            {
+                Debug.Log("Not your turn");
+                return false;
+            }
+            
             // Wilds always playable
             if (card.Rank is Rank.Wild or Rank.WildDraw4)
             {
@@ -20,7 +35,7 @@ namespace DataClasses.BusinessLayer
 
             // Match against active suit OR rank match
             // Any card can be played after a wild card
-            return activeSuit == Suit.Wild || card.Suit == activeSuit || card.Rank == topCard.Rank;
+            return state.ActiveSuit == Suit.Wild || card.Suit == state.ActiveSuit || card.Rank == state.TopDiscard.Rank;
         }
 
         public static void PlayCard(GameState state, Player player, Card card)
