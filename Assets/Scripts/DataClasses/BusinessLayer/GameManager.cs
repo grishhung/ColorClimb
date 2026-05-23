@@ -9,7 +9,7 @@ namespace DataClasses.BusinessLayer
     public class GameManager : MonoBehaviour
     {
         private static readonly int IsClockwise = Shader.PropertyToID("_IsClockwise");
-        
+
         [SerializeField] private GameView gameView;
 
         private const int PlayerCount = 4;
@@ -26,7 +26,7 @@ namespace DataClasses.BusinessLayer
 
             DealStartingHands();
             InitializeDiscardPile();
-            
+
             UpdateShaderGlobals();
 
             gameView.Bind(_state);
@@ -40,7 +40,6 @@ namespace DataClasses.BusinessLayer
 
         private void TryPlayCard(Player player, Card card)
         {
-            // Rule check
             if (!GameRules.CanPlay(player, card, _state))
             {
                 Debug.Log("Illegal move");
@@ -48,25 +47,23 @@ namespace DataClasses.BusinessLayer
             }
 
             GameRules.PlayCard(_state, player, card);
-            
-            // Always switch the turn to the correct person
-            // (e.g., in the case of a jump-in)
-            while (true)
+
+            // Realign to the jump-in player without consuming pending skips
+            var pendingSkips = _state.SkipCount;
+            _state.SkipCount = 0;
+
+            while (_state.Players[_state.CurrentPlayerIndex] != player)
             {
-                if (_state.Players[_state.CurrentPlayerIndex] != player)
-                {
-                    AdvanceTurn();
-                }
-                else
-                {
-                    break;
-                }
+                _state.CurrentPlayerIndex = GetNextPlayerIndex();
             }
+
+            // Restore skips so AdvanceTurn processes them correctly
+            _state.SkipCount = pendingSkips;
 
             AdvanceTurn();
             UpdateShaderGlobals();
             gameView.Refresh();
-            
+
             Debug.Log($"Player played {card}");
         }
 
@@ -75,9 +72,7 @@ namespace DataClasses.BusinessLayer
             var currentPlayer = _state.Players[_state.CurrentPlayerIndex];
 
             // TODO: Uncomment the following for when we implement a "reshuffle" (lives) system
-            
-            // // Try to refill the draw pile from the discard pile if it's empty.
-            // // Always keep the top discard card in place.
+            //
             // if (_state.DrawPile.Cards.Count == 0)
             // {
             //     if (_state.DiscardPile.Cards.Count <= 1)
@@ -85,19 +80,37 @@ namespace DataClasses.BusinessLayer
             //         Debug.Log("Draw pile and discard pile are both empty — cannot draw");
             //         return;
             //     }
-            //
             //     _state.DrawPile.RefillFromDiscard(_state.DiscardPile);
             //     Debug.Log("Draw pile exhausted — reshuffled discard pile");
             // }
 
-            // For now, we're drawing one card at a time and not advancing the turn until a card can be played
-            var drawnCard = _state.DrawPile.Draw();
-            currentPlayer.Hand.Add(drawnCard);
-            
+            if (_state.PendingDrawCount > 0)
+            {
+                // Player couldn't or chose not to counter the chain — deal the burst and end their turn.
+                var burst = _state.PendingDrawCount;
+                _state.PendingDrawCount = 0;
+                _state.PendingDrawRank = null;
+
+                for (var i = 0; i < burst; i++)
+                {
+                    currentPlayer.Hand.Add(_state.DrawPile.Draw());
+                }
+
+                Debug.Log($"Player accepted draw burst of {burst} cards");
+
+                AdvanceTurn();
+            }
+            else
+            {
+                // Normal draw: add one card without advancing the turn.
+                // Player keeps drawing until they find something playable.
+                var drawnCard = _state.DrawPile.Draw();
+                currentPlayer.Hand.Add(drawnCard);
+                Debug.Log($"Player drew {drawnCard}");
+            }
+
             UpdateShaderGlobals();
             gameView.Refresh();
-
-            Debug.Log($"Player drew {drawnCard}");
         }
 
         private void AdvanceTurn()
@@ -166,9 +179,6 @@ namespace DataClasses.BusinessLayer
                     drawPile.Add(new Card(suit, Rank.Number9, false));
 
                     drawPile.Add(new Card(suit, Rank.Number0, false, new RotateHandsEffect()));
-
-                    // TODO: Make Draw 2 cards skip the player's turn
-                    // unless they can also play a draw 2 and stack the draw amount
                     drawPile.Add(new Card(suit, Rank.Draw2, false, new DrawEffect(2)));
                     drawPile.Add(new Card(suit, Rank.Reverse, false, new ReverseEffect()));
                     drawPile.Add(new Card(suit, Rank.Skip, false, new SkipEffect()));
@@ -177,13 +187,11 @@ namespace DataClasses.BusinessLayer
 
             for (var i = 0; i < 4; i++)
             {
-                // TODO: Make Draw 4 cards skip the player's turn
-                // unless they can also play a draw 4 and stack the draw amount
                 drawPile.Add(new Card(Suit.Wild, Rank.Wild, false, new WildEffect()));
                 drawPile.Add(new Card(Suit.Wild, Rank.WildDraw4, false, new WildEffect(), new DrawEffect(4)));
             }
         }
-        
+
         private void UpdateShaderGlobals()
         {
             Shader.SetGlobalFloat(IsClockwise, _state.Direction == GameplayDirection.Clockwise ? 1f : 0f);

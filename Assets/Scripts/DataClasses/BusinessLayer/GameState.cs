@@ -15,6 +15,12 @@ namespace DataClasses.BusinessLayer
         public Suit ActiveSuit;
         public int SkipCount;
 
+        // When nonzero, a draw chain is in progress. The current player must either
+        // counter with a matching draw card or accept the burst by clicking the draw pile.
+        public int PendingDrawCount;
+        // The rank that started the chain — only the same rank can continue it.
+        public Rank? PendingDrawRank;
+
         public Card TopDiscard =>
             DiscardPile.Cards.Count > 0
                 ? DiscardPile.Cards[^1]

@@ -19,22 +19,29 @@ namespace DataClasses.BusinessLayer
                 Debug.Log("Jump-in allowed");
                 return true;
             }
-            
+
             // Turn enforcement
             if (state.Players[state.CurrentPlayerIndex] != player)
             {
                 Debug.Log("Not your turn");
                 return false;
             }
-            
+
+            // While a draw chain is active, only the matching draw rank can be played.
+            // Everything else is locked out until the chain is accepted or countered.
+            if (state.PendingDrawCount > 0)
+            {
+                return card.Rank == state.PendingDrawRank;
+            }
+
             // Wilds always playable
             if (card.Rank is Rank.Wild or Rank.WildDraw4)
             {
                 return true;
             }
 
-            // Match against active suit OR rank match
-            // Any card can be played after a wild card
+            // Match against active suit OR rank match.
+            // Any card can be played after a wild card.
             return state.ActiveSuit == Suit.Wild || card.Suit == state.ActiveSuit || card.Rank == state.TopDiscard.Rank;
         }
 
@@ -45,9 +52,17 @@ namespace DataClasses.BusinessLayer
 
             // Add to discard pile
             state.DiscardPile.Add(card);
-            
+
             // ALWAYS reset suit to played card first
             state.ActiveSuit = card.Suit;
+
+            // Track which rank started or continues the draw chain.
+            // This must be set before effects resolve so PendingDrawCount
+            // is attributed to the correct rank.
+            if (card.Rank is Rank.Draw2 or Rank.WildDraw4)
+            {
+                state.PendingDrawRank = card.Rank;
+            }
 
             // Apply effects (ONLY state mutations, no turn progression)
             foreach (var effect in card.Effects)
