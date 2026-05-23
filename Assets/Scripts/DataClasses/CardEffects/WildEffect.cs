@@ -12,7 +12,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return "Choose any {Active Suit} for the next player to match.";
+            return "Can be played regardless of the active color or rank. Allows the active color to be changed.";
         }
     }
 }

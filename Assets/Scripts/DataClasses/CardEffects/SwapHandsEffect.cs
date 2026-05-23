@@ -12,7 +12,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return "Choose another player and {Swap} your hand with theirs.";
+            return "Choose another adventurer and swap your hand with theirs.";
         }
 
         private static int ChooseTarget(GameState state, Player source)

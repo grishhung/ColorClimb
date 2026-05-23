@@ -20,7 +20,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return $"The next player must draw {_amount} cards unless they counter with another {{+{_amount}}}. This effect {{Stacks}}.";
+            return $"The next adventurers must draw {_amount} cards unless they can counter with another +{_amount} card. This effect is {{stackable}}.";
         }
     }
 }

@@ -19,8 +19,8 @@ namespace DataClasses.CardEffects
         public override string GetDescription(GameState state)
         {
             return _amount == 1
-                ? "The next player's turn is {Skipped}."
-                : $"The next {_amount} players' turns are {{{_amount}x Skipped}}.";
+                ? "The next adventurer's turn is {skipped}."
+                : $"The next {_amount} adventurers' turns are {{skipped}}.";
         }
     }
 }

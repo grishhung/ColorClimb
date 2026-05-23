@@ -84,7 +84,7 @@ namespace DataViews
             _cardViews.Clear();
         }
 
-        private Random GetSeededRand(Guid guid)
+        private static Random GetSeededRand(Guid guid)
         {
             var guidBytes = guid.ToByteArray();
             var seed = BitConverter.ToInt32(guidBytes, 0);
@@ -97,7 +97,7 @@ namespace DataViews
             return (randomFloat * 2f - 1f) * maxRotation;
         }
 
-        private float GetSeededAngle(Random rand)
+        private static float GetSeededAngle(Random rand)
         {
             var randomFloat = (float)rand.NextDouble();
             return randomFloat * 2f * Mathf.PI;

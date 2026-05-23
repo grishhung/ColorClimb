@@ -21,9 +21,6 @@ namespace DataClasses.BusinessLayer
         // The rank that started the chain — only the same rank can continue it.
         public Rank? PendingDrawRank;
 
-        public Card TopDiscard =>
-            DiscardPile.Cards.Count > 0
-                ? DiscardPile.Cards[^1]
-                : null;
+        public Card TopDiscard => DiscardPile.Cards.Count > 0 ? DiscardPile.Cards[^1] : null;
     }
 }

@@ -14,14 +14,18 @@ namespace DataClasses.CardEffects
             {
                 var last = hands[^1];
                 for (var i = hands.Count - 1; i > 0; i--)
+                {
                     hands[i] = hands[i - 1];
+                }
                 hands[0] = last;
             }
             else
             {
                 var first = hands[0];
                 for (var i = 0; i < hands.Count - 1; i++)
+                {
                     hands[i] = hands[i + 1];
+                }
                 hands[^1] = first;
             }
 
@@ -31,7 +35,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return $"All players pass their entire hand {GameplayDirectionUtils.GetString(state.Direction)} in {{Turn Order}}.";
+            return $"All adventurers exchange hands {GameplayDirectionUtils.GetString(state.Direction)}.";
         }
     }
 }
