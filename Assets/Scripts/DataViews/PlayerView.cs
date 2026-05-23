@@ -11,13 +11,15 @@ namespace DataViews
 
         private Player _player;
         private GameState _state;
+        private TooltipView _tooltipView;
 
         public event Action<Player, Card> CardClicked;
 
-        public void Bind(Player player, GameState state)
+        public void Bind(Player player, GameState state, TooltipView tooltipView)
         {
             _player = player;
             _state = state;
+            _tooltipView = tooltipView;
             handView.CardClicked += OnCardClicked;
             Render();
         }
@@ -29,9 +31,9 @@ namespace DataViews
 
         public void Render()
         {
-            handView.Render(_player, _state);
+            handView.Render(_player, _state, _tooltipView);
         }
-        
+
         public void ApplyCurrentDimState()
         {
             handView.ApplyCurrentDimState(_player, _state);

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
+using UnityEngine.InputSystem;
 using UnityEngine;
 
 namespace DataViews
@@ -11,35 +12,37 @@ namespace DataViews
     {
         [SerializeField] private Transform cardParent;
         [SerializeField] private CardView cardPrefab;
-        
+
         [SerializeField] private float fanRadius = 20f;
         [SerializeField] private float individualSpacing = 3f;
         [SerializeField] private float maxSpacing = 24f;
         [SerializeField] private float cardTilt = -5f;
-        
+
         public event Action<Card> CardClicked;
-        
+
         private readonly List<CardView> _cardViews = new();
+        private GameState _state;
 
-        public void Render(Player player, GameState state)
+        public void Render(Player player, GameState state, TooltipView tooltipView)
         {
+            _state = state;
             Clear();
-            
-            var cards = GetSortedCards(player.Hand);
 
+            var cards = GetSortedCards(player.Hand);
             foreach (var card in cards)
             {
                 var view = Instantiate(cardPrefab, cardParent);
                 view.Bind(card);
                 view.Clicked += OnCardClicked;
+                view.MouseEntered += cv => tooltipView.Show(cv.Card, state, Mouse.current.position.ReadValue());
+                view.MouseExited += _ => tooltipView.Hide();
                 _cardViews.Add(view);
             }
 
             Layout();
             ApplyCurrentDimState(player, state);
         }
-        
-        
+
         private void OnCardClicked(CardView view)
         {
             CardClicked?.Invoke(view.Card);
@@ -82,12 +85,12 @@ namespace DataViews
 
             _cardViews.Clear();
         }
-        
+
         private IEnumerable<Card> GetSortedCards(CardPile hand)
         {
             return hand.Cards.OrderBy(c => c.Suit).ThenBy(c => c.Rank);
         }
-        
+
         public void ApplyCurrentDimState(Player player, GameState state)
         {
             foreach (var cardView in _cardViews)

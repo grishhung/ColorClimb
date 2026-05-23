@@ -1,5 +1,4 @@
 using DataClasses.BusinessLayer;
-using DataClasses.Enums;
 
 namespace DataClasses.CardEffects
 {
@@ -7,14 +6,13 @@ namespace DataClasses.CardEffects
     {
         public override void Resolve(GameState state, Player source)
         {
-            // There's technically nothing special to do here
-            // Any card can be played after a wild card since this is cooperative
-            // However, we still need this effect so we can have a description
+            // Nothing to do mechanically — the active suit is set by GameRules.PlayCard.
+            // The effect exists so the card has a description.
         }
-        
+
         public override string GetDescription(GameState state)
         {
-            return "Changes the active color to a color of the active player's choice.";
+            return "Choose any {Active Suit} for the next player to match.";
         }
     }
 }

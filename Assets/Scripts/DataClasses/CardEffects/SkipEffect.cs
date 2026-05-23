@@ -4,15 +4,23 @@ namespace DataClasses.CardEffects
 {
     public class SkipEffect : CardEffect
     {
+        private readonly int _amount;
+
+        public SkipEffect(int amount = 1)
+        {
+            _amount = amount;
+        }
+
         public override void Resolve(GameState state, Player source)
         {
-            state.SkipCount += 1;
+            state.SkipCount += _amount;
         }
-        
+
         public override string GetDescription(GameState state)
         {
-            var pluralSuffix = state.SkipCount != 1 ? "'s" : "s'";
-            return $"{{Skips the next {state.SkipCount} player{pluralSuffix} turns.}}";
+            return _amount == 1
+                ? "The next player's turn is {Skipped}."
+                : $"The next {_amount} players' turns are {{{_amount}x Skipped}}.";
         }
     }
 }

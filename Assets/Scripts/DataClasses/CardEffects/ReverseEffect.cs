@@ -11,11 +11,11 @@ namespace DataClasses.CardEffects
                 ? GameplayDirection.CounterClockwise
                 : GameplayDirection.Clockwise;
         }
-        
+
         public override string GetDescription(GameState state)
         {
             var opposite = GameplayDirectionUtils.GetOppositeDirection(state.Direction);
-            return $"{{Changes the turn order to be {GameplayDirectionUtils.GetString(opposite)}.}}";
+            return $"Reverses the {{Turn Order}} to {GameplayDirectionUtils.GetString(opposite)}.";
         }
     }
 }

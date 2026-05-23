@@ -20,9 +20,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return $"{{Forces the next player to draw {_amount} cards}} "
-                + "unless they are able to play a card of the same type. "
-                + "This effect stacks.";
+            return $"The next player must draw {_amount} cards unless they counter with another {{+{_amount}}}. This effect {{Stacks}}.";
         }
     }
 }

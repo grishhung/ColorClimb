@@ -20,8 +20,8 @@ namespace DataViews
 
         public Card Card { get; private set; }
         public event Action<CardView> Clicked;
-        public event Action MouseEntered;
-        public event Action MouseExited;
+        public event Action<CardView> MouseEntered;
+        public event Action<CardView> MouseExited;
 
         public void Bind(Card card)
         {
@@ -40,7 +40,7 @@ namespace DataViews
             }
 
             ApplyHoverVisuals();
-            MouseEntered?.Invoke();
+            MouseEntered?.Invoke(this);
         }
 
         private void OnMouseExit()
@@ -51,7 +51,7 @@ namespace DataViews
             }
 
             ApplyRestVisuals();
-            MouseExited?.Invoke();
+            MouseExited?.Invoke(this);
         }
         
         private void OnMouseDown()

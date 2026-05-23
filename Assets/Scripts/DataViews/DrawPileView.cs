@@ -78,13 +78,13 @@ namespace DataViews
                 var topCard = _cardViews[^1];
                 var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - 1 - floatStartIndex);
 
-                topCard.MouseEntered += () =>
+                topCard.MouseEntered += _ =>
                 {
                     foreach (var card in floatingCards)
                         card.SetHoverState(true);
                 };
 
-                topCard.MouseExited += () =>
+                topCard.MouseExited += _ =>
                 {
                     foreach (var card in floatingCards)
                         card.SetHoverState(false);

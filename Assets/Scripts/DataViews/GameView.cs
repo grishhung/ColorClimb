@@ -13,6 +13,7 @@ namespace DataViews
 
         [SerializeField] private DrawPileView drawPileView;
         [SerializeField] private DiscardPileView discardPileView;
+        [SerializeField] private TooltipView tooltipView;
 
         private readonly List<PlayerView> _playerViews = new();
 
@@ -30,7 +31,7 @@ namespace DataViews
                 var player = state.Players[i];
                 var view = Instantiate(playerViewPrefab, playerAnchors[i]);
 
-                view.Bind(player, _state);
+                view.Bind(player, _state, tooltipView);
                 view.CardClicked += OnCardClicked;
 
                 _playerViews.Add(view);
@@ -40,7 +41,7 @@ namespace DataViews
 
             // Initial pile render
             drawPileView.Render(_state.DrawPile, _state.PendingDrawCount);
-            discardPileView.Render(_state.DiscardPile);
+            discardPileView.Render(_state.DiscardPile, _state, tooltipView);
         }
 
         private void OnCardClicked(Player player, Card card)
@@ -62,7 +63,7 @@ namespace DataViews
             }
 
             drawPileView.Render(_state.DrawPile, _state.PendingDrawCount);
-            discardPileView.Render(_state.DiscardPile);
+            discardPileView.Render(_state.DiscardPile, _state, tooltipView);
         }
     }
 }

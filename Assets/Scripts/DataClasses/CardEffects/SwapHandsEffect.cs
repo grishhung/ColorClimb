@@ -7,13 +7,12 @@ namespace DataClasses.CardEffects
         public override void Resolve(GameState state, Player source)
         {
             var target = state.Players[ChooseTarget(state, source)];
-
             (source.Hand, target.Hand) = (target.Hand, source.Hand);
         }
-        
+
         public override string GetDescription(GameState state)
         {
-            return "Allows the active player to swap hands with another player.";
+            return "Choose another player and {Swap} your hand with theirs.";
         }
 
         private static int ChooseTarget(GameState state, Player source)
