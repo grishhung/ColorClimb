@@ -33,8 +33,8 @@ namespace DataViews
             {
                 var view = Instantiate(cardPrefab, cardParent);
                 view.Bind(card);
-                view.Clicked += OnCardClicked;
-                view.Clicked += _ => tooltipView.Hide();
+                view.Selected += OnCardClicked;
+                view.Selected += _ => tooltipView.Hide();
                 view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
                 view.MouseExited += _ => tooltipView.Hide();
                 _cardViews.Add(view);
@@ -80,7 +80,7 @@ namespace DataViews
         {
             foreach (var view in _cardViews)
             {
-                view.Clicked -= OnCardClicked;
+                view.Selected -= OnCardClicked;
                 Destroy(view.gameObject);
             }
 

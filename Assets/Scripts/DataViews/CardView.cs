@@ -14,12 +14,14 @@ namespace DataViews
         private Color _baseColor;
         private bool _isDimmed;
         private bool _canHover;
+
+        private bool _isHovering;
         
         private Vector3 _basePosition;
         private Vector3 _baseScale;
 
         public Card Card { get; private set; }
-        public event Action<CardView> Clicked;
+        public event Action<CardView> Selected;
         public event Action<CardView> MouseEntered;
         public event Action<CardView> MouseExited;
 
@@ -39,6 +41,7 @@ namespace DataViews
                 return;
             }
 
+            _isHovering = true;
             ApplyHoverVisuals();
             MouseEntered?.Invoke(this);
         }
@@ -50,6 +53,7 @@ namespace DataViews
                 return;
             }
 
+            _isHovering = false;
             ApplyRestVisuals();
             MouseExited?.Invoke(this);
         }
@@ -61,7 +65,22 @@ namespace DataViews
                 return;
             }
 
-            Clicked?.Invoke(this);
+            // TODO: Have some sort of "in the middle of clicking on this" animation state
+        }
+        
+        private void OnMouseUp()
+        {
+            if (!_canHover)
+            {
+                return;
+            }
+
+            // TODO: Release "in the middle of clicking on this" animation state
+
+            if (_isHovering)
+            {
+                Selected?.Invoke(this);
+            }
         }
 
         /// <summary>

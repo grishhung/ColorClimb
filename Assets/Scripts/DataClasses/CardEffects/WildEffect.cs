@@ -12,7 +12,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return "Can be played regardless of the active color or rank. Allows the active color to be changed.";
+            return "Can be played regardless of the active color or symbol. Allows the active color to be changed.";
         }
     }
 }

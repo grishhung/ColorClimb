@@ -99,7 +99,7 @@ namespace DataViews
                         tooltipView.Hide();
                     };
 
-                    card.Clicked += _ =>
+                    card.Selected += _ =>
                     {
                         tooltipView.Hide();
                         DrawPileClicked?.Invoke();
@@ -115,7 +115,7 @@ namespace DataViews
                     "Draw a card. Your turn continues until you draw something playable.",
                     Mouse.current.position.ReadValue());
                 topCard.MouseExited += _ => tooltipView.Hide();
-                topCard.Clicked += _ =>
+                topCard.Selected += _ =>
                 {
                     tooltipView.Hide();
                     DrawPileClicked?.Invoke();
