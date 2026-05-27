@@ -60,27 +60,26 @@ namespace DataViews
 
             var seenKeywords = new List<string>();
 
-            // Status line; shown above effects, mutually exclusive
-            if (player != null && GameRules.IsJumpIn(player, card, state))
-            {
-                AddRawLabel($"{statusOpenTag}Jump-in available! Play out of turn.{statusCloseTag}");
-            }
-            else if (player != null && !GameRules.CanPlay(player, card, state))
+
+            if (player != null && !GameRules.CanPlay(player, card, state))
             {
                 AddRawLabel($"{statusOpenTag}This card cannot be played right now.{statusCloseTag}");
             }
 
-            // Effect descriptions
-            if (card.Effects.Count == 0)
+            if (player != null && GameRules.IsJumpIn(player, card, state))
+            {
+                // TODO: Turn this into a status and add AddStatusLabel() to allow for keyword usage.
+                AddEffectLabel("Can be played to {jump in}.", seenKeywords);
+            }
+            else if (card.Effects.Count == 0)
             {
                 AddRawLabel($"{statusOpenTag}No special effect.{statusCloseTag}");
             }
-            else
+
+
+            foreach (var effect in card.Effects)
             {
-                foreach (var effect in card.Effects)
-                {
-                    AddEffectLabel(effect.GetDescription(state), seenKeywords);
-                }
+                AddEffectLabel(effect.GetDescription(state), seenKeywords);
             }
 
             PopulateKeywordColumn(seenKeywords);

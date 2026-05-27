@@ -11,8 +11,10 @@ namespace DataClasses.Tooltip
         private static readonly Dictionary<string, string> Definitions = new()
         {
             ["stackable"] =
-                "Multiple copies of this effect played in sequence add together. " +
+                "Multiple copies of this effect played in sequence will add together. " +
                 "The total is dealt all at once to the first adventurer who cannot counter.",
+            ["jump in"] =
+                "This card can be played out of turn.",
         };
 
         /// <summary>

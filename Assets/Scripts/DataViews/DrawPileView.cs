@@ -75,8 +75,8 @@ namespace DataViews
             {
                 // Build the tooltip string for the burst
                 var burstTooltip = _pendingDrawCount == 1
-                    ? "Draw 1 card and end your turn."
-                    : $"Draw {_pendingDrawCount} cards and end your turn.";
+                    ? "Draw {1} card and end your turn."
+                    : $"Draw {{{_pendingDrawCount}}} cards and end your turn.";
 
                 var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - floatStartIndex);
 
@@ -112,7 +112,7 @@ namespace DataViews
                 var topCard = _cardViews[^1];
 
                 topCard.MouseEntered += _ => tooltipView.Show(
-                    "Draw a card. Your turn continues until you draw something playable.",
+                    "Draw {1} card and end your turn.",
                     Mouse.current.position.ReadValue());
                 topCard.MouseExited += _ => tooltipView.Hide();
                 topCard.Selected += _ =>
@@ -126,7 +126,9 @@ namespace DataViews
         private void Clear()
         {
             foreach (var view in _cardViews)
+            {
                 Destroy(view.gameObject);
+            }
 
             _cardViews.Clear();
         }

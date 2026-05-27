@@ -21,11 +21,9 @@ namespace DataViews
         public event Action<Card> CardClicked;
 
         private readonly List<CardView> _cardViews = new();
-        private GameState _state;
 
         public void Render(Player player, GameState state, TooltipView tooltipView)
         {
-            _state = state;
             Clear();
 
             var cards = GetSortedCards(player.Hand);
@@ -94,9 +92,11 @@ namespace DataViews
 
         public void ApplyCurrentDimState(Player player, GameState state)
         {
+            var isCurrentPlayersTurn = state.Players[state.CurrentPlayerIndex] == player;
             foreach (var cardView in _cardViews)
             {
-                cardView.SetDimmed(!GameRules.CanPlay(player, cardView.Card, state));
+                // TODO: Make the "unplayable" visual different between active and inactive players
+                cardView.SetDimmed(!isCurrentPlayersTurn && !GameRules.CanPlay(player, cardView.Card, state));
             }
         }
     }

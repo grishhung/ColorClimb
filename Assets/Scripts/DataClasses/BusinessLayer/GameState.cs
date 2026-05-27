@@ -15,6 +15,9 @@ namespace DataClasses.BusinessLayer
         public Suit ActiveSuit;
         public int SkipCount;
 
+        // Don't let the players perform actions while animations are occurring and the like
+        public bool ActionsAllowed = true;
+
         // When nonzero, a draw chain is in progress. The current player must either
         // counter with a matching draw card or accept the burst by clicking the draw pile.
         public int PendingDrawCount;
