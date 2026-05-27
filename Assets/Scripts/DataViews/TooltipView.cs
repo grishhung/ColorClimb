@@ -12,19 +12,16 @@ namespace DataViews
     /// <summary>
     /// Two-column tooltip panel inspired by Slay the Spire.
     ///
-    /// Left column  — one TMP label per card effect. Keywords in the description
-    ///                are highlighted inline using TMP rich text tags.
-    /// Right column — one TMP label per unique keyword that appears across all
-    ///                effects on the hovered card, showing its definition from
-    ///                KeywordLibrary.
+    /// Left column  - status line (jump-in / cannot play) + one label per card effect.
+    /// Right column - one label per unique keyword with a library definition.
     ///
     /// Scene setup:
-    ///   'panel'               — root GameObject toggled on/off (Screen Space Overlay Canvas)
-    ///   'effectLabelPrefab'   — TMP_Text prefab for one effect row (left column)
-    ///   'effectContainer'     — Transform with VerticalLayoutGroup + ContentSizeFitter
-    ///   'keywordLabelPrefab'  — TMP_Text prefab for one keyword definition (right column)
-    ///   'keywordContainer'    — Transform with VerticalLayoutGroup + ContentSizeFitter
-    ///   'keywordColumn'       — parent GameObject for the right column (toggled when empty)
+    ///   'panel'               - root GameObject toggled on/off (Screen Space Overlay Canvas)
+    ///   'effectLabelPrefab'   - TMP_Text prefab for one effect row (left column)
+    ///   'effectContainer'     - child Transform with VerticalLayoutGroup
+    ///   'keywordLabelPrefab'  - TMP_Text prefab for one keyword definition (right column)
+    ///   'keywordContainer'    - child Transform with VerticalLayoutGroup
+    ///   'keywordColumn'       - parent GameObject for the right column (toggled when empty)
     /// </summary>
     public class TooltipView : MonoBehaviour
     {
@@ -39,6 +36,8 @@ namespace DataViews
 
         [SerializeField] private string keywordOpenTag  = "<color=#FFD700>";
         [SerializeField] private string keywordCloseTag = "</color>";
+        [SerializeField] private string statusOpenTag   = "<i><color=#AAAAAA>";
+        [SerializeField] private string statusCloseTag  = "</color></i>";
 
         [SerializeField] private Vector2 cursorOffset = new(16f, -16f);
 
@@ -50,71 +49,69 @@ namespace DataViews
             Hide();
         }
 
-        public void Show(Card card, GameState state, Vector2 screenPosition)
+        /// <summary>
+        /// Shows a tooltip for a card in a player's hand.
+        /// Handles jump-in callout, "cannot be played" status, effect descriptions,
+        /// and keyword definitions.
+        /// </summary>
+        public void Show(Card card, Player player, GameState state, Vector2 screenPosition)
         {
-            if (card.Effects.Count == 0)
-            {
-                return;
-            }
-
             ClearLabels();
 
-            // Collect all unique keywords across every effect on this card
             var seenKeywords = new List<string>();
 
-            foreach (var effect in card.Effects)
+            // Status line; shown above effects, mutually exclusive
+            if (player != null && GameRules.IsJumpIn(player, card, state))
             {
-                var parsed = DescriptionParser.Parse(effect.GetDescription(state));
+                AddRawLabel($"{statusOpenTag}Jump-in available! Play out of turn.{statusCloseTag}");
+            }
+            else if (player != null && !GameRules.CanPlay(player, card, state))
+            {
+                AddRawLabel($"{statusOpenTag}This card cannot be played right now.{statusCloseTag}");
+            }
 
-                // Build the left-column label with inline keyword highlighting
-                var sb = new StringBuilder();
-                foreach (var segment in parsed.Segments)
+            // Effect descriptions
+            if (card.Effects.Count == 0)
+            {
+                AddRawLabel($"{statusOpenTag}No special effect.{statusCloseTag}");
+            }
+            else
+            {
+                foreach (var effect in card.Effects)
                 {
-                    if (segment.IsKeyword)
-                    {
-                        sb.Append($"{keywordOpenTag}{segment.Text}{keywordCloseTag}");
-                    }
-                    else
-                    {
-                        sb.Append(segment.Text);
-                    }
-                }
-
-                var effectLabel = Instantiate(effectLabelPrefab, effectContainer);
-                effectLabel.text = sb.ToString();
-                _effectLabels.Add(effectLabel);
-
-                // Accumulate unique keywords for the right column
-                foreach (var keyword in parsed.Keywords)
-                {
-                    if (!seenKeywords.Contains(keyword))
-                    {
-                        seenKeywords.Add(keyword);
-                    }
+                    AddEffectLabel(effect.GetDescription(state), seenKeywords);
                 }
             }
 
-            // Populate the right column with keyword definitions
-            var anyDefinitions = false;
-            foreach (var keyword in seenKeywords)
-            {
-                var definition = KeywordLibrary.Get(keyword);
-                if (definition == null)
-                {
-                    continue;
-                }
-
-                var keywordLabel = Instantiate(keywordLabelPrefab, keywordContainer);
-                keywordLabel.text = $"{keywordOpenTag}{keyword}{keywordCloseTag}\n{definition}";
-                _keywordLabels.Add(keywordLabel);
-                anyDefinitions = true;
-            }
-
-            // Only show the right column if there's something to show
-            keywordColumn.SetActive(anyDefinitions);
+            PopulateKeywordColumn(seenKeywords);
 
             panel.SetActive(true);
-            PositionAt(Mouse.current.position.ReadValue());
+            PositionAt(screenPosition);
+        }
+
+        /// <summary>
+        /// Shows a tooltip for a card with no player context (e.g. discard pile top card).
+        /// No status line is shown since playability cannot be determined.
+        /// </summary>
+        public void Show(Card card, GameState state, Vector2 screenPosition)
+        {
+            Show(card, null, state, screenPosition);
+        }
+
+        /// <summary>
+        /// Shows a tooltip from a plain description string (e.g. draw pile).
+        /// Supports the same {keyword} syntax as card effects.
+        /// </summary>
+        public void Show(string description, Vector2 screenPosition)
+        {
+            ClearLabels();
+
+            var seenKeywords = new List<string>();
+            AddEffectLabel(description, seenKeywords);
+            PopulateKeywordColumn(seenKeywords);
+
+            panel.SetActive(true);
+            PositionAt(screenPosition);
         }
 
         public void Hide()
@@ -129,6 +126,57 @@ namespace DataViews
             {
                 PositionAt(Mouse.current.position.ReadValue());
             }
+        }
+
+        private void AddRawLabel(string text)
+        {
+            var label = Instantiate(effectLabelPrefab, effectContainer);
+            label.text = text;
+            _effectLabels.Add(label);
+        }
+
+        private void AddEffectLabel(string description, List<string> seenKeywords)
+        {
+            var parsed = DescriptionParser.Parse(description);
+
+            var sb = new StringBuilder();
+            foreach (var segment in parsed.Segments)
+            {
+                sb.Append(segment.IsKeyword
+                    ? $"{keywordOpenTag}{segment.Text}{keywordCloseTag}"
+                    : segment.Text);
+            }
+
+            AddRawLabel(sb.ToString());
+
+            foreach (var keyword in parsed.Keywords)
+            {
+                if (!seenKeywords.Contains(keyword))
+                {
+                    seenKeywords.Add(keyword);
+                }
+            }
+        }
+
+        private void PopulateKeywordColumn(List<string> seenKeywords)
+        {
+            var anyDefinitions = false;
+
+            foreach (var keyword in seenKeywords)
+            {
+                var definition = KeywordLibrary.Get(keyword);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var keywordLabel = Instantiate(keywordLabelPrefab, keywordContainer);
+                keywordLabel.text = $"{keywordOpenTag}{ToTitleCase(keyword)}{keywordCloseTag}\n{definition}";
+                _keywordLabels.Add(keywordLabel);
+                anyDefinitions = true;
+            }
+
+            keywordColumn.SetActive(anyDefinitions);
         }
 
         private void PositionAt(Vector2 screenPosition)
@@ -154,6 +202,16 @@ namespace DataViews
                 Destroy(label.gameObject);
             }
             _keywordLabels.Clear();
+        }
+        
+        private static string ToTitleCase(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text);
         }
     }
 }

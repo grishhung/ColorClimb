@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DataViews
 {
@@ -17,13 +19,11 @@ namespace DataViews
         private readonly List<CardView> _cardViews = new();
         private int _pendingDrawCount;
 
-        // Fired when the player clicks the top card of the draw pile
         public event Action DrawPileClicked;
 
-        public void Render(CardPile pile, int pendingDrawCount = 0)
+        public void Render(CardPile pile, int pendingDrawCount, GameState state, TooltipView tooltipView)
         {
             _pendingDrawCount = pendingDrawCount;
-
             Clear();
 
             foreach (var card in pile.Cards)
@@ -33,15 +33,13 @@ namespace DataViews
                 _cardViews.Add(cardView);
             }
 
-            Layout();
+            Layout(state, tooltipView);
         }
 
-        private void Layout()
+        private void Layout(GameState state, TooltipView tooltipView)
         {
             if (_cardViews.Count == 0)
-            {
                 return;
-            }
 
             var floatStartIndex = Mathf.Max(0, _cardViews.Count - _pendingDrawCount);
 
@@ -66,41 +64,69 @@ namespace DataViews
                 }
 
                 cardViewTransform.position += new Vector3(0, yOffset, 0);
-
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
                 cardView.SetDimmed(_pendingDrawCount > 0 && !isFloating && i == floatStartIndex - 1);
-                cardView.SetCanHover(i == _cardViews.Count - 1);
+
+                // All floating cards are hoverable and clickable, not just the top one
+                cardView.SetCanHover(isFloating || i == _cardViews.Count - 1);
             }
 
-            // When the top card is hovered, mirror the hover state onto all other floating cards
-            if (_pendingDrawCount > 1 && floatStartIndex < _cardViews.Count - 1)
+            if (_pendingDrawCount > 0)
             {
+                // Build the tooltip string for the burst
+                var burstTooltip = _pendingDrawCount == 1
+                    ? "Draw 1 card and end your turn."
+                    : $"Draw {_pendingDrawCount} cards and end your turn.";
+
+                var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - floatStartIndex);
+
+                foreach (var floatingCard in floatingCards)
+                {
+                    var card = floatingCard; // capture for lambda
+
+                    // All floating cards hover together
+                    card.MouseEntered += _ =>
+                    {
+                        foreach (var c in floatingCards)
+                            if (c != card) c.SetHoverState(true);
+                        tooltipView.Show(burstTooltip, Mouse.current.position.ReadValue());
+                    };
+
+                    card.MouseExited += _ =>
+                    {
+                        foreach (var c in floatingCards)
+                            if (c != card) c.SetHoverState(false);
+                        tooltipView.Hide();
+                    };
+
+                    card.Clicked += _ =>
+                    {
+                        tooltipView.Hide();
+                        DrawPileClicked?.Invoke();
+                    };
+                }
+            }
+            else
+            {
+                // Normal draw pile; only the top card is interactive
                 var topCard = _cardViews[^1];
-                var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - 1 - floatStartIndex);
 
-                topCard.MouseEntered += _ =>
+                topCard.MouseEntered += _ => tooltipView.Show(
+                    "Draw a card. Your turn continues until you draw something playable.",
+                    Mouse.current.position.ReadValue());
+                topCard.MouseExited += _ => tooltipView.Hide();
+                topCard.Clicked += _ =>
                 {
-                    foreach (var card in floatingCards)
-                        card.SetHoverState(true);
-                };
-
-                topCard.MouseExited += _ =>
-                {
-                    foreach (var card in floatingCards)
-                        card.SetHoverState(false);
+                    tooltipView.Hide();
+                    DrawPileClicked?.Invoke();
                 };
             }
-
-            // Wire the top card's click up to our own event
-            _cardViews[^1].Clicked += _ => DrawPileClicked?.Invoke();
         }
 
         private void Clear()
         {
             foreach (var view in _cardViews)
-            {
                 Destroy(view.gameObject);
-            }
 
             _cardViews.Clear();
         }

@@ -27,7 +27,7 @@ namespace DataClasses.Tooltip
 
                 if (open == -1)
                 {
-                    // No more keywords — remainder is plain text
+                    // No more keywords; remainder is plain text
                     if (i < raw.Length)
                     {
                         segments.Add(new DescriptionSegment(raw[i..], isKeyword: false));
@@ -44,7 +44,7 @@ namespace DataClasses.Tooltip
                 var close = raw.IndexOf('}', open + 1);
                 if (close == -1)
                 {
-                    // Malformed — no closing brace, treat the rest as plain text
+                    // Malformed; no closing brace, treat the rest as plain text
                     segments.Add(new DescriptionSegment(raw[open..], isKeyword: false));
                     break;
                 }

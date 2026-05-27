@@ -6,7 +6,7 @@ namespace DataClasses.CardEffects
     {
         public override void Resolve(GameState state, Player source)
         {
-            // Nothing to do mechanically — the active suit is set by GameRules.PlayCard.
+            // Nothing to do mechanically; the active suit is set by GameRules.PlayCard.
             // The effect exists so the card has a description.
         }
 

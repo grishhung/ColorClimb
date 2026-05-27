@@ -77,16 +77,16 @@ namespace DataClasses.BusinessLayer
             // {
             //     if (_state.DiscardPile.Cards.Count <= 1)
             //     {
-            //         Debug.Log("Draw pile and discard pile are both empty — cannot draw");
+            //         Debug.Log("Draw pile and discard pile are both empty; cannot draw");
             //         return;
             //     }
             //     _state.DrawPile.RefillFromDiscard(_state.DiscardPile);
-            //     Debug.Log("Draw pile exhausted — reshuffled discard pile");
+            //     Debug.Log("Draw pile exhausted; reshuffled discard pile");
             // }
 
             if (_state.PendingDrawCount > 0)
             {
-                // Player couldn't or chose not to counter the chain — deal the burst and end their turn.
+                // Player couldn't or chose not to counter the chain; deal the burst and end their turn.
                 var burst = _state.PendingDrawCount;
                 _state.PendingDrawCount = 0;
                 _state.PendingDrawRank = null;

@@ -71,6 +71,7 @@ namespace DataViews
             // Wire tooltip to the top card only
             var topCard = _cardViews[^1];
             topCard.MouseEntered += cv => tooltipView.Show(cv.Card, state, Mouse.current.position.ReadValue());
+            topCard.Clicked += _ => tooltipView.Hide();
             topCard.MouseExited += _ => tooltipView.Hide();
         }
 

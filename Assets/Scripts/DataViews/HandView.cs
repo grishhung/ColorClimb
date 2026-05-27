@@ -34,7 +34,8 @@ namespace DataViews
                 var view = Instantiate(cardPrefab, cardParent);
                 view.Bind(card);
                 view.Clicked += OnCardClicked;
-                view.MouseEntered += cv => tooltipView.Show(cv.Card, state, Mouse.current.position.ReadValue());
+                view.Clicked += _ => tooltipView.Hide();
+                view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
                 view.MouseExited += _ => tooltipView.Hide();
                 _cardViews.Add(view);
             }

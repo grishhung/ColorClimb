@@ -65,7 +65,7 @@ namespace DataViews
         }
 
         /// <summary>
-        /// Applies hover visuals from outside — used to group-hover cards that aren't
+        /// Applies hover visuals from outside; used to group-hover cards that aren't
         /// directly under the mouse (e.g. the pending draw block beneath the top card).
         /// </summary>
         public void SetHoverState(bool hovered)

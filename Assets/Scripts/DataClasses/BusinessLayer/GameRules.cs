@@ -14,7 +14,7 @@ namespace DataClasses.BusinessLayer
             }
 
             // Identical cards can always be played regardless of turn order ("jump-ins")
-            if (card.Rank == state.TopDiscard.Rank && card.Suit == state.TopDiscard.Suit)
+            if (IsJumpIn(player, card, state))
             {
                 Debug.Log("Jump-in allowed");
                 return true;
@@ -43,6 +43,22 @@ namespace DataClasses.BusinessLayer
             // Match against active suit OR rank match.
             // Any card can be played after a wild card.
             return state.ActiveSuit == Suit.Wild || card.Suit == state.ActiveSuit || card.Rank == state.TopDiscard.Rank;
+        }
+
+        /// <summary>
+        /// Returns true if the card is an exact rank+suit match for the top discard,
+        /// qualifying it as a jump-in regardless of whose turn it is.
+        /// </summary>
+        public static bool IsJumpIn(Player player, Card card, GameState state)
+        {
+            if (card == null || state.TopDiscard == null)
+            {
+                return false;
+            }
+
+            return state.Players[state.CurrentPlayerIndex] != player 
+                   && card.Rank == state.TopDiscard.Rank 
+                   && card.Suit == state.TopDiscard.Suit;
         }
 
         public static void PlayCard(GameState state, Player player, Card card)

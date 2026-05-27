@@ -13,7 +13,7 @@ namespace DataClasses.CardEffects
 
         public override void Resolve(GameState state, Player source)
         {
-            // Don't deal cards immediately — accumulate into the pending draw chain.
+            // Don't deal cards immediately; accumulate into the pending draw chain.
             // The burst is dealt in GameManager.TryDrawCard when the chain is accepted.
             state.PendingDrawCount += _amount;
         }
