@@ -29,13 +29,17 @@ namespace DataClasses.Tooltip
                 {
                     // No more keywords — remainder is plain text
                     if (i < raw.Length)
+                    {
                         segments.Add(new DescriptionSegment(raw[i..], isKeyword: false));
+                    }
                     break;
                 }
 
                 // Plain text before the opening brace
                 if (open > i)
+                {
                     segments.Add(new DescriptionSegment(raw[i..open], isKeyword: false));
+                }
 
                 var close = raw.IndexOf('}', open + 1);
                 if (close == -1)
@@ -49,7 +53,9 @@ namespace DataClasses.Tooltip
                 segments.Add(new DescriptionSegment(keyword, isKeyword: true));
 
                 if (!keywords.Contains(keyword))
+                {
                     keywords.Add(keyword);
+                }
 
                 i = close + 1;
             }

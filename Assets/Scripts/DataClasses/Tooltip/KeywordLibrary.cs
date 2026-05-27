@@ -13,10 +13,6 @@ namespace DataClasses.Tooltip
             ["stackable"] =
                 "Multiple copies of this effect played in sequence add together. " +
                 "The total is dealt all at once to the first adventurer who cannot counter.",
-
-            ["skipped"] =
-                "The affected adventurer's turn is skipped entirely. " +
-                "They draw no cards and play no cards that turn.",
         };
 
         /// <summary>

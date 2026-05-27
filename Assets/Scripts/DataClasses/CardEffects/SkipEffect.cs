@@ -18,9 +18,10 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return _amount == 1
-                ? "The next adventurer's turn is {skipped}."
-                : $"The next {_amount} adventurers' turns are {{skipped}}.";
+            var prefix = _amount == 1
+                ? "The next adventurer's turn is skipped entirely. "
+                : $"The next {_amount} adventurers' turns are skipped entirely. ";
+            return prefix + "They draw no cards and play no cards that turn.";
         }
     }
 }

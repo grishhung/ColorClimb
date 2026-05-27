@@ -35,7 +35,7 @@ namespace DataClasses.CardEffects
 
         public override string GetDescription(GameState state)
         {
-            return $"All adventurers exchange hands {GameplayDirectionUtils.GetString(state.Direction)}.";
+            return $"All adventurers exchange hands {{{GameplayDirectionUtils.GetString(state.Direction)}}}.";
         }
     }
 }

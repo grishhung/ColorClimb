@@ -37,8 +37,8 @@ namespace DataViews
         [SerializeField] private Transform keywordContainer;
         [SerializeField] private GameObject keywordColumn;
 
-        [SerializeField] private string keywordOpenTag  = "<b><color=#FFD700>";
-        [SerializeField] private string keywordCloseTag = "</color></b>";
+        [SerializeField] private string keywordOpenTag  = "<color=#FFD700>";
+        [SerializeField] private string keywordCloseTag = "</color>";
 
         [SerializeField] private Vector2 cursorOffset = new(16f, -16f);
 
@@ -53,7 +53,9 @@ namespace DataViews
         public void Show(Card card, GameState state, Vector2 screenPosition)
         {
             if (card.Effects.Count == 0)
+            {
                 return;
+            }
 
             ClearLabels();
 
@@ -69,9 +71,13 @@ namespace DataViews
                 foreach (var segment in parsed.Segments)
                 {
                     if (segment.IsKeyword)
+                    {
                         sb.Append($"{keywordOpenTag}{segment.Text}{keywordCloseTag}");
+                    }
                     else
+                    {
                         sb.Append(segment.Text);
+                    }
                 }
 
                 var effectLabel = Instantiate(effectLabelPrefab, effectContainer);
@@ -82,7 +88,9 @@ namespace DataViews
                 foreach (var keyword in parsed.Keywords)
                 {
                     if (!seenKeywords.Contains(keyword))
+                    {
                         seenKeywords.Add(keyword);
+                    }
                 }
             }
 
@@ -92,7 +100,9 @@ namespace DataViews
             {
                 var definition = KeywordLibrary.Get(keyword);
                 if (definition == null)
+                {
                     continue;
+                }
 
                 var keywordLabel = Instantiate(keywordLabelPrefab, keywordContainer);
                 keywordLabel.text = $"{keywordOpenTag}{keyword}{keywordCloseTag}\n{definition}";
@@ -134,11 +144,15 @@ namespace DataViews
         private void ClearLabels()
         {
             foreach (var label in _effectLabels)
+            {
                 Destroy(label.gameObject);
+            }
             _effectLabels.Clear();
 
             foreach (var label in _keywordLabels)
+            {
                 Destroy(label.gameObject);
+            }
             _keywordLabels.Clear();
         }
     }

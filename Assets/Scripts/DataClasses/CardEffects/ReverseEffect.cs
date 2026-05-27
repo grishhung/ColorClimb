@@ -15,7 +15,7 @@ namespace DataClasses.CardEffects
         public override string GetDescription(GameState state)
         {
             var opposite = GameplayDirectionUtils.GetOppositeDirection(state.Direction);
-            return $"Changes the turn order to {GameplayDirectionUtils.GetString(opposite)}.";
+            return $"Changes the turn order to {{{GameplayDirectionUtils.GetString(opposite)}}}.";
         }
     }
 }
