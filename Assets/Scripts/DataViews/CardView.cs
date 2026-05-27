@@ -6,24 +6,63 @@ using UnityEngine;
 
 namespace DataViews
 {
+    /// <summary>
+    /// Manages all visual state for a single card GameObject.
+    ///
+    /// Transform compositing; the final localPosition is the sum of three independent layers:
+    ///   _basePosition    : the layout anchor assigned by the parent view; never changes at runtime
+    ///   _animationOffset : written each animation tick (e.g. jiggle); always XZ-only
+    ///   _hoverOffset     : applied while the cursor is over the card; always Y-only
+    ///
+    /// Each layer is written independently, and FlushTransform() recomposes them every frame.
+    /// This ensures no layer can accidentally clobber another.
+    /// </summary>
     public class CardView : MonoBehaviour
     {
         [SerializeField] private TMP_Text label;
         [SerializeField] private Renderer bodyRenderer;
-        
+
+        // Color / interaction state
         private Color _baseColor;
         private bool _isDimmed;
         private bool _canHover;
-
         private bool _isHovering;
-        
+
+        // Transform layer 1: layout anchor (set by parent, read-only at runtime)
         private Vector3 _basePosition;
         private Vector3 _baseScale;
 
+        // Transform layer 2: animation offset (XZ jiggle, future animations)
+        private Vector3 _animationOffset;
+
+        // Transform layer 3: hover lift (Y only)
+        private Vector3 _hoverOffset;
+
+        // Hover scale multiplier (applied on top of _baseScale when hovering)
+        private float _hoverScaleMultiplier = 1f;
+
+        // Jiggle parameters
+        public float JiggleAmount { get; set; }
+        private const float JiggleUpdateRate = 1f / 30f;
+        private float _jiggleTimer;
+
+        // Hover lift constants
+        private const float HoverLiftAmount = 0.5f;
+        private const float HoverScaleMultiplier = 1.25f;
+
+        // Public surface
         public Card Card { get; private set; }
         public event Action<CardView> Selected;
         public event Action<CardView> MouseEntered;
         public event Action<CardView> MouseExited;
+
+        private void Update()
+        {
+            TickJiggle();
+            FlushTransform();
+        }
+
+        // Binding
 
         public void Bind(Card card)
         {
@@ -34,6 +73,8 @@ namespace DataViews
             ApplyColor();
         }
 
+        // Unity mouse callbacks
+
         private void OnMouseEnter()
         {
             if (!_canHover)
@@ -42,7 +83,8 @@ namespace DataViews
             }
 
             _isHovering = true;
-            ApplyHoverVisuals();
+            SetHoverLayerActive(true);
+            ApplyHoverColor();
             MouseEntered?.Invoke(this);
         }
 
@@ -54,10 +96,11 @@ namespace DataViews
             }
 
             _isHovering = false;
-            ApplyRestVisuals();
+            SetHoverLayerActive(false);
+            ApplyColor();
             MouseExited?.Invoke(this);
         }
-        
+
         private void OnMouseDown()
         {
             if (!_canHover)
@@ -65,9 +108,9 @@ namespace DataViews
                 return;
             }
 
-            // TODO: Have some sort of "in the middle of clicking on this" animation state
+            // TODO: Enter "in the middle of clicking" animation state
         }
-        
+
         private void OnMouseUp()
         {
             if (!_canHover)
@@ -75,7 +118,7 @@ namespace DataViews
                 return;
             }
 
-            // TODO: Release "in the middle of clicking on this" animation state
+            // TODO: Release "in the middle of clicking" animation state
 
             if (_isHovering)
             {
@@ -83,36 +126,139 @@ namespace DataViews
             }
         }
 
+        // External hover control (for group-hover; e.g. pending draw block)
+
         /// <summary>
-        /// Applies hover visuals from outside; used to group-hover cards that aren't
-        /// directly under the mouse (e.g. the pending draw block beneath the top card).
+        /// Applies or removes hover visuals from outside; used to group-hover cards that
+        /// aren't directly under the mouse (e.g. the pending draw block beneath the top card).
+        /// Does NOT set _isHovering, so OnMouseUp still fires correctly for the top card only.
         /// </summary>
         public void SetHoverState(bool hovered)
         {
+            SetHoverLayerActive(hovered);
+
             if (hovered)
-                ApplyHoverVisuals();
+            {
+                ApplyHoverColor();
+            }
             else
-                ApplyRestVisuals();
+            {
+                ApplyColor();
+            }
         }
 
-        private void ApplyHoverVisuals()
+        // Public setters
+
+        public void SetCanHover(bool canHover)
         {
-            // TODO: Add edge highlighting as well and dimming for illegal cards
-            // Make it so that if a card can be used to jump in, it's not dimmed
-            bodyRenderer.material.color = _baseColor * (_isDimmed ? 0.5f : 1f) * 1.25f;
-            label.color = Color.white * (_isDimmed ? 0.5f : 1f);
-
-            gameObject.transform.localPosition = _basePosition + Vector3.up * 0.5f;
-            gameObject.transform.localScale = _baseScale * 1.25f;
-
-            // TODO: Create real tooltip functionality using GetDescription()
+            _canHover = canHover;
         }
 
-        private void ApplyRestVisuals()
+        public void SetDimmed(bool dimmed)
         {
+            _isDimmed = dimmed;
             ApplyColor();
-            ApplyPositionAndScale();
         }
+
+        /// <summary>
+        /// Called by the parent view after it has positioned this card.
+        /// Records the layout anchor so all animation and hover layers are relative to it.
+        /// </summary>
+        public void SetRestState(Vector3 position, Vector3 scale)
+        {
+            _basePosition = position;
+            _baseScale = scale;
+
+            // Reset transient layers so a re-layout starts clean
+            _animationOffset = Vector3.zero;
+            _hoverOffset = Vector3.zero;
+            _hoverScaleMultiplier = 1f;
+        }
+
+        // Transform layer helpers
+
+        /// <summary>
+        /// Turns the hover offset layer on or off without touching _basePosition or _animationOffset.
+        /// </summary>
+        private void SetHoverLayerActive(bool active)
+        {
+            if (active)
+            {
+                _hoverOffset = Vector3.up * HoverLiftAmount;
+                _hoverScaleMultiplier = HoverScaleMultiplier;
+            }
+            else
+            {
+                _hoverOffset = Vector3.zero;
+                _hoverScaleMultiplier = 1f;
+            }
+        }
+
+        /// <summary>
+        /// Writes the composited transform to the GameObject.
+        /// Called once per Update() after all layers have been updated for this frame.
+        /// </summary>
+        private void FlushTransform()
+        {
+            gameObject.transform.localPosition = _basePosition + _animationOffset + _hoverOffset;
+            gameObject.transform.localScale = _baseScale * _hoverScaleMultiplier;
+        }
+
+        // Jiggle animation
+
+        private void TickJiggle()
+        {
+            if (JiggleAmount <= 0f)
+            {
+                _animationOffset = Vector3.zero;
+                return;
+            }
+
+            _jiggleTimer += Time.deltaTime;
+
+            if (!(_jiggleTimer >= JiggleUpdateRate))
+            {
+                return;
+            }
+
+            var angle = UnityEngine.Random.Range(0f, 2f * Mathf.PI);
+            var radius = UnityEngine.Random.Range(0f, JiggleAmount);
+
+            var xOffset = radius * Mathf.Cos(angle);
+            var zOffset = radius * Mathf.Sin(angle);
+
+            // Jiggle lives entirely in the XZ plane; _hoverOffset owns the Y axis
+            _animationOffset = new Vector3(xOffset, 0f, zOffset);
+
+            // Keep excess time to maintain tick accuracy
+            _jiggleTimer -= JiggleUpdateRate;
+        }
+
+        // Color helpers
+
+        private void ApplyHoverColor()
+        {
+            // TODO: Add edge highlighting; add separate visual for "illegal card" vs "not your turn"
+            bodyRenderer.material.color = _baseColor * (_isDimmed ? 0.5f : 1f) * HoverScaleMultiplier;
+            label.color = Color.white * (_isDimmed ? 0.5f : 1f);
+        }
+
+        private void ApplyColor()
+        {
+            var finalCardColor = _baseColor;
+            var finalLabelColor = Color.white;
+
+            if (_isDimmed)
+            {
+                finalCardColor *= 0.5f;
+                finalLabelColor *= 0.5f;
+            }
+
+            bodyRenderer.material.color = finalCardColor;
+            label.color = finalLabelColor;
+        }
+
+        // Static lookup helpers
 
         private static Color GetSuitColor(Suit suit)
         {
@@ -126,8 +272,8 @@ namespace DataViews
                 _ => Color.magenta
             };
         }
-        
-        private string GetDisplayText(Card card)
+
+        private static string GetDisplayText(Card card)
         {
             return card.Rank switch
             {
@@ -151,44 +297,6 @@ namespace DataViews
 
                 _ => "?"
             };
-        }
-        
-        private void ApplyColor()
-        {
-            var finalCardColor = _baseColor;
-            var finalLabelColor = Color.white;
-
-            if (_isDimmed)
-            {
-                finalCardColor *= 0.5f;
-                finalLabelColor *= 0.5f;
-            }
-
-            bodyRenderer.material.color = finalCardColor;
-            label.color = finalLabelColor;
-        }
-        
-        private void ApplyPositionAndScale()
-        {
-            gameObject.transform.localPosition = _basePosition;
-            gameObject.transform.localScale = _baseScale;
-        }
-        
-        public void SetCanHover(bool canHover)
-        {
-            _canHover = canHover;
-        }
-        
-        public void SetDimmed(bool dimmed)
-        {
-            _isDimmed = dimmed;
-            ApplyColor();
-        }
-        
-        public void SetRestState(Vector3 position, Vector3 scale)
-        {
-            _basePosition = position;
-            _baseScale = scale;
         }
     }
 }

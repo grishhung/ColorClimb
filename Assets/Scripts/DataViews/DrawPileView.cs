@@ -18,6 +18,8 @@ namespace DataViews
 
         private readonly List<CardView> _cardViews = new();
         private int _pendingDrawCount;
+        
+        private const float MaxJiggleAmount = 0.1f;
 
         public event Action DrawPileClicked;
 
@@ -33,10 +35,10 @@ namespace DataViews
                 _cardViews.Add(cardView);
             }
 
-            Layout(state, tooltipView);
+            Layout(tooltipView);
         }
 
-        private void Layout(GameState state, TooltipView tooltipView)
+        private void Layout(TooltipView tooltipView)
         {
             if (_cardViews.Count == 0)
                 return;
@@ -53,10 +55,14 @@ namespace DataViews
 
                 if (isFloating)
                 {
+                    // Make the card float
                     var floatingIndex = i - floatStartIndex;
                     yOffset = individualSpacing * floatStartIndex
-                            + pendingDrawLift
-                            + floatingCardSpacing * floatingIndex;
+                              + pendingDrawLift 
+                              + floatingCardSpacing * floatingIndex;
+                    
+                    // Make the card jiggle proportionally to the pending draw amount
+                    cardView.JiggleAmount = Mathf.Min(MaxJiggleAmount, _pendingDrawCount * (MaxJiggleAmount / 16));
                 }
                 else
                 {

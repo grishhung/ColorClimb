@@ -48,6 +48,8 @@ namespace DataViews
                 var cardView = _cardViews[i];
                 var cardViewTransform = cardView.transform;
 
+                // TODO: Tie the offset to the card so we don't need to keep recalculating this
+                // When we update the discard pile, the positions must remain the same
                 var rand = GetSeededRand(cardView.Card.Guid);
                 var rotation = GetSeededRotation(rand);
 
