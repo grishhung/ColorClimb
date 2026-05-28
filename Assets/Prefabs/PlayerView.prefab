@@ -80,7 +80,7 @@ MonoBehaviour:
   cardPrefab: {fileID: 2929632381950408189, guid: 1b5bbc0ce05b147f5a20d456f1185ba0, type: 3}
   fanRadius: 20
   individualSpacing: 3
-  maxSpacing: 24
+  maxSpacing: 22.5
   cardTilt: -5
 --- !u!1 &3776099680283242201
 GameObject:

@@ -29,7 +29,7 @@ namespace DataViews
 
         [SerializeField] private float fanRadius = 20f;
         [SerializeField] private float individualSpacing = 3f;
-        [SerializeField] private float maxSpacing = 24f;
+        [SerializeField] private float maxSpacing = 22.5f;
         [SerializeField] private float cardTilt = -5f;
 
         // Fired when any card in the hand is clicked (normal play mode).
