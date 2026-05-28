@@ -260,7 +260,7 @@ namespace DataViews
 
         // Static lookup helpers
 
-        private static Color GetSuitColor(Suit suit)
+        public static Color GetSuitColor(Suit suit)
         {
             return suit switch
             {
@@ -273,7 +273,7 @@ namespace DataViews
             };
         }
 
-        private static string GetDisplayText(Card card)
+        public static string GetDisplayText(Card card)
         {
             return card.Rank switch
             {

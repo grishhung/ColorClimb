@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using DataClasses.BusinessLayer;
-using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardPiles;
 using DataClasses.Enums;
 using UnityEngine;
@@ -17,11 +16,7 @@ namespace DataViews
         [SerializeField] private DiscardPileView discardPileView;
         [SerializeField] private TooltipView tooltipView;
 
-        [SerializeField] private SuitPickerView suitPickerView;
-
-        // PlayerPickerView is kept in the scene for future use but is no longer
-        // called by this view; swap picking now happens directly on the hands.
-        [SerializeField] private PlayerPickerView playerPickerView;
+        [SerializeField] private WildSuitSelectorView wildSuitSelectorView;
 
         private readonly List<PlayerView> _playerViews = new();
 
@@ -85,7 +80,7 @@ namespace DataViews
         public void ShowSuitPicker(Action<Suit> onChosen)
         {
             tooltipView.Hide();
-            suitPickerView.Show(onChosen);
+            wildSuitSelectorView.Show(onChosen);
         }
 
         /// <summary>
