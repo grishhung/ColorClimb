@@ -494,6 +494,8 @@ MonoBehaviour:
   drawPileView: {fileID: 1948337859}
   discardPileView: {fileID: 857808353}
   tooltipView: {fileID: 3792902241555156237}
+  suitPickerView: {fileID: 0}
+  playerPickerView: {fileID: 0}
 --- !u!4 &331688778
 Transform:
   m_ObjectHideFlags: 0
@@ -1218,7 +1220,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1133793610250460381, guid: c3cb1408ea11147dc8bc5bdb459f2bc1, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.005
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1133793610250460381, guid: c3cb1408ea11147dc8bc5bdb459f2bc1, type: 3}
       propertyPath: m_LocalPosition.z
@@ -1256,7 +1258,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: Table
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 4710845751234624925, guid: c3cb1408ea11147dc8bc5bdb459f2bc1, type: 3}
+    - {fileID: 3925479064726323590, guid: c3cb1408ea11147dc8bc5bdb459f2bc1, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
