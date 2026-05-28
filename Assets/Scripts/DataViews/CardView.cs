@@ -22,6 +22,11 @@ namespace DataViews
         [SerializeField] private TMP_Text label;
         [SerializeField] private Renderer bodyRenderer;
 
+        [SerializeField] private TMP_Text backLabel;
+        [SerializeField] private Renderer backRenderer;
+
+        private readonly Color _backColor = Color.rebeccaPurple * 1.25f;
+
         // Color / interaction state
         private Color _baseColor;
         private bool _isDimmed;
@@ -239,23 +244,33 @@ namespace DataViews
         private void ApplyHoverColor()
         {
             // TODO: Add edge highlighting; add separate visual for "illegal card" vs "not your turn"
-            bodyRenderer.material.color = _baseColor * (_isDimmed ? 0.5f : 1f) * HoverScaleMultiplier;
-            label.color = Color.white * (_isDimmed ? 0.5f : 1f);
+            var dimMultiplier = _isDimmed ? 0.5f : 1f;
+
+            bodyRenderer.material.color = _baseColor * dimMultiplier * HoverScaleMultiplier;
+            label.color = Color.white * dimMultiplier;
+
+            backRenderer.material.color = _backColor * dimMultiplier * HoverScaleMultiplier;
+            backLabel.color = Color.white * dimMultiplier;
         }
 
         private void ApplyColor()
         {
             var finalCardColor = _baseColor;
+            var finalBackColor = _backColor;
             var finalLabelColor = Color.white;
 
             if (_isDimmed)
             {
                 finalCardColor *= 0.5f;
+                finalBackColor *= 0.5f;
                 finalLabelColor *= 0.5f;
             }
 
             bodyRenderer.material.color = finalCardColor;
             label.color = finalLabelColor;
+
+            backRenderer.material.color = finalBackColor;
+            backLabel.color = finalLabelColor;
         }
 
         // Static lookup helpers

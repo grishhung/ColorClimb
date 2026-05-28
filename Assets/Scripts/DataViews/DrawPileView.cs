@@ -70,6 +70,11 @@ namespace DataViews
                 }
 
                 cardViewTransform.position += new Vector3(0, yOffset, 0);
+
+                // Flip face-down. FlushTransform() never writes rotation, so this
+                // sits undisturbed for the lifetime of the card view.
+                cardViewTransform.localEulerAngles = new Vector3(0f, 0f, 180f);
+
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
                 cardView.SetDimmed(_pendingDrawCount > 0 && !isFloating && i == floatStartIndex - 1);
 
