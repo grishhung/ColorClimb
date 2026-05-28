@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardPiles;
 using DataClasses.Enums;
 
@@ -15,8 +16,9 @@ namespace DataClasses.BusinessLayer
         public Suit ActiveSuit;
         public int SkipCount;
 
-        // Don't let the players perform actions while animations are occurring and the like
-        public bool ActionsAllowed = true;
+        // When non-null, a UI decision is waiting for player input. All card-play
+        // and draw-pile actions are blocked until this is resolved and cleared.
+        public PendingDecision PendingDecision;
 
         // When nonzero, a draw chain is in progress. The current player must either
         // counter with a matching draw card or accept the burst by clicking the draw pile.
@@ -25,5 +27,11 @@ namespace DataClasses.BusinessLayer
         public Rank? PendingDrawRank;
 
         public Card TopDiscard => DiscardPile.Cards.Count > 0 ? DiscardPile.Cards[^1] : null;
+
+        /// <summary>
+        /// Returns true when the player may interact with cards or the draw pile.
+        /// False while an animation is running or a UI decision is awaiting input.
+        /// </summary>
+        public bool ActionsAllowed => PendingDecision == null;
     }
 }

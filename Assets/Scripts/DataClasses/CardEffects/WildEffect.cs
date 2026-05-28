@@ -1,4 +1,7 @@
+using System;
 using DataClasses.BusinessLayer;
+using DataClasses.BusinessLayer.PendingDecisions;
+using DataClasses.Enums;
 
 namespace DataClasses.CardEffects
 {
@@ -6,8 +9,18 @@ namespace DataClasses.CardEffects
     {
         public override void Resolve(GameState state, Player source)
         {
-            // Nothing to do mechanically; the active suit is set by GameRules.PlayCard.
-            // The effect exists so the card has a description.
+            // Set a sentinel suit so that nothing is playable until the real choice
+            // lands. GameManager will open the suit picker, wait for input, then
+            // call OnSuitChosen to commit the chosen suit and clear the decision.
+            state.ActiveSuit = Suit.Wild;
+
+            state.PendingDecision = new PendingSuitChoice(
+                chosenSuit =>
+                {
+                    state.ActiveSuit = chosenSuit;
+                    state.PendingDecision = null;
+                }
+            );
         }
 
         public override string GetDescription(GameState state)

@@ -1,4 +1,5 @@
 using DataClasses.BusinessLayer;
+using DataClasses.BusinessLayer.PendingDecisions;
 
 namespace DataClasses.CardEffects
 {
@@ -6,19 +7,22 @@ namespace DataClasses.CardEffects
     {
         public override void Resolve(GameState state, Player source)
         {
-            var target = state.Players[ChooseTarget(state, source)];
-            (source.Hand, target.Hand) = (target.Hand, source.Hand);
+            var sourceIndex = state.Players.IndexOf(source);
+
+            state.PendingDecision = new PendingSwapTargetChoice(
+                sourceIndex,
+                targetIndex =>
+                {
+                    var target = state.Players[targetIndex];
+                    (source.Hand, target.Hand) = (target.Hand, source.Hand);
+                    state.PendingDecision = null;
+                }
+            );
         }
 
         public override string GetDescription(GameState state)
         {
             return "Choose another adventurer and swap this hand with theirs.";
-        }
-
-        private static int ChooseTarget(GameState state, Player source)
-        {
-            // TODO: Replace this placeholder with proper UI selection
-            return (state.CurrentPlayerIndex + 1) % state.Players.Count;
         }
     }
 }

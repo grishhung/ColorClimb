@@ -1,3 +1,5 @@
+using System.Collections;
+using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardEffects;
 using DataClasses.CardPiles;
 using DataClasses.Enums;
@@ -8,7 +10,7 @@ namespace DataClasses.BusinessLayer
 {
     public class GameManager : MonoBehaviour
     {
-        private static readonly int IsClockwise = Shader.PropertyToID("_IsClockwise");
+        private static readonly int IsClockwiseId = Shader.PropertyToID("_IsClockwise");
 
         [SerializeField] private GameView gameView;
 
@@ -30,25 +32,56 @@ namespace DataClasses.BusinessLayer
             UpdateShaderGlobals();
 
             gameView.Bind(_state);
-            gameView.CardClicked += TryPlayCard;
-            gameView.DrawPileClicked += TryDrawCard;
+            gameView.CardClicked += OnCardClicked;
+            gameView.DrawPileClicked += OnDrawPileClicked;
 
             gameView.Refresh();
 
             Debug.Log("Game started");
         }
 
-        private void TryPlayCard(Player player, Card card)
+        // Input handlers (synchronous entry points from the view layer)
+
+        private void OnCardClicked(Player player, Card card)
         {
+            // Reject input while a decision panel is open or an animation is running.
+            if (!_state.ActionsAllowed)
+            {
+                return;
+            }
+
             if (!GameRules.CanPlay(player, card, _state))
             {
                 Debug.Log("Illegal move");
                 return;
             }
 
-            GameRules.PlayCard(_state, player, card);
+            StartCoroutine(PlayCardRoutine(player, card));
+        }
 
-            // Realign to the jump-in player without consuming pending skips
+        private void OnDrawPileClicked()
+        {
+            if (!_state.ActionsAllowed)
+            {
+                return;
+            }
+
+            StartCoroutine(DrawCardRoutine());
+        }
+
+        // Play-card coroutine
+
+        /// <summary>
+        /// Handles the full lifecycle of a card play:
+        ///   1. Realign turn to the jump-in player (if applicable).
+        ///   2. Mutate game state via GameRules.PlayCard (effects fire here).
+        ///   3. If an effect queued a PendingDecision, open the appropriate UI panel
+        ///      and yield until the player resolves it.
+        ///   4. Advance the turn and refresh the view.
+        /// </summary>
+        private IEnumerator PlayCardRoutine(Player player, Card card)
+        {
+            // Step 1: Realign to the jump-in player
             var pendingSkips = _state.SkipCount;
             _state.SkipCount = 0;
 
@@ -57,28 +90,39 @@ namespace DataClasses.BusinessLayer
                 _state.CurrentPlayerIndex = GetNextPlayerIndex();
             }
 
-            // Restore skips so AdvanceTurn processes them correctly
             _state.SkipCount = pendingSkips;
 
+            // Step 2: Apply the card to game state
+            GameRules.PlayCard(_state, player, card);
+
+            Debug.Log($"Player played {card}");
+
+            // Step 3: Resolve any pending decision
+            if (_state.PendingDecision != null)
+            {
+                yield return ResolvePendingDecisionRoutine(player);
+            }
+
+            // Step 4: Advance turn and refresh
             AdvanceTurn();
             UpdateShaderGlobals();
             gameView.Refresh();
-
-            Debug.Log($"Player played {card}");
         }
 
-        private void TryDrawCard()
+        // Draw-card coroutine
+
+        private IEnumerator DrawCardRoutine()
         {
             var currentPlayer = _state.Players[_state.CurrentPlayerIndex];
 
-            // TODO: Uncomment the following for when we implement a "reshuffle" (lives) system
+            // TODO: Uncomment when the reshuffle / lives system is implemented.
             //
             // if (_state.DrawPile.Cards.Count == 0)
             // {
             //     if (_state.DiscardPile.Cards.Count <= 1)
             //     {
             //         Debug.Log("Draw pile and discard pile are both empty; cannot draw");
-            //         return;
+            //         yield break;
             //     }
             //     _state.DrawPile.RefillFromDiscard(_state.DiscardPile);
             //     Debug.Log("Draw pile exhausted; reshuffled discard pile");
@@ -86,7 +130,7 @@ namespace DataClasses.BusinessLayer
 
             if (_state.PendingDrawCount > 0)
             {
-                // Player couldn't or chose not to counter the chain; deal the burst and end their turn.
+                // Player couldn't or chose not to counter the chain; deal the burst.
                 var burst = _state.PendingDrawCount;
                 _state.PendingDrawCount = 0;
                 _state.PendingDrawRank = null;
@@ -102,16 +146,60 @@ namespace DataClasses.BusinessLayer
             }
             else
             {
-                // Normal draw: add one card without advancing the turn.
-                // Player keeps drawing until they find something playable.
+                // Normal draw: add one card, keep the turn.
                 var drawnCard = _state.DrawPile.Draw();
                 currentPlayer.Hand.Add(drawnCard);
                 Debug.Log($"Player drew {drawnCard}");
             }
 
+            // Draw never triggers a decision panel, so no yield needed here.
             UpdateShaderGlobals();
             gameView.Refresh();
+
+            yield break;
         }
+
+        // Decision resolver
+
+        /// <summary>
+        /// Inspects the current PendingDecision, opens the matching UI panel, and
+        /// yields until the player makes their choice (i.e. until PendingDecision
+        /// is cleared back to null by the effect's own callback).
+        ///
+        /// Adding a new decision type only requires:
+        ///   1. A new PendingDecision subclass.
+        ///   2. A new UI view.
+        ///   3. A new 'else if' branch here.
+        /// </summary>
+        private IEnumerator ResolvePendingDecisionRoutine(Player sourcePlayer)
+        {
+            if (_state.PendingDecision is PendingSuitChoice suitChoice)
+            {
+                gameView.ShowSuitPicker(suit =>
+                {
+                    // The callback commits the choice and clears PendingDecision.
+                    suitChoice.OnSuitChosen(suit);
+                    Debug.Log($"Suit chosen: {suit}");
+                });
+            }
+            else if (_state.PendingDecision is PendingSwapTargetChoice swapChoice)
+            {
+                gameView.ShowHandSwapPicker(swapChoice.SourcePlayerIndex, targetIndex =>
+                {
+                    // The callback executes the swap and clears PendingDecision.
+                    swapChoice.OnTargetChosen(targetIndex);
+                    Debug.Log($"Swap target chosen: Player {targetIndex + 1}");
+                });
+            }
+
+            // Yield until the effect callback nulls out PendingDecision.
+            while (_state.PendingDecision != null)
+            {
+                yield return null;
+            }
+        }
+
+        // Turn management
 
         private void AdvanceTurn()
         {
@@ -135,6 +223,8 @@ namespace DataClasses.BusinessLayer
                 _ => _state.CurrentPlayerIndex
             };
         }
+
+        // Setup
 
         private void DealStartingHands()
         {
@@ -194,7 +284,7 @@ namespace DataClasses.BusinessLayer
 
         private void UpdateShaderGlobals()
         {
-            Shader.SetGlobalFloat(IsClockwise, _state.Direction == GameplayDirection.Clockwise ? 1f : 0f);
+            Shader.SetGlobalFloat(IsClockwiseId, _state.Direction == GameplayDirection.Clockwise ? 1f : 0f);
         }
     }
 }
