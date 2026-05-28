@@ -12,6 +12,13 @@ namespace DataClasses.BusinessLayer.PendingDecisions
     {
         public readonly Action<Suit> OnSuitChosen;
 
+        /// <summary>
+        /// The rank of the wild card that triggered this choice.
+        /// Set by GameRules.PlayCard after effects resolve so GameManager can
+        /// pass the correct display label (e.g. "WILD" vs "+4") to the selector UI.
+        /// </summary>
+        public Rank PlayedRank { get; set; }
+
         public PendingSuitChoice(Action<Suit> onSuitChosen)
         {
             OnSuitChosen = onSuitChosen;

@@ -40,13 +40,13 @@ namespace DataViews
         private readonly List<SuitSelectorCardView> _selectorCards = new();
         private Action<Suit> _onChosen;
 
-        // Public API
+        // PUBLIC API
 
         /// <summary>
         /// Spawns the four suit-selector cards and wires up the callback.
         /// Safe to call while already shown; it will clear previous cards first.
         /// </summary>
-        public void Show(Action<Suit> onChosen)
+        public void Show(Action<Suit> onChosen, string selectorLabel)
         {
             Hide(); // defensive clear in case Show() is called twice
 
@@ -54,8 +54,6 @@ namespace DataViews
 
             var suits = new[] { Suit.Red, Suit.Yellow, Suit.Blue, Suit.Green };
 
-            // Centre the row on the anchor: offsets are -1.5, -0.5, +0.5, +1.5
-            // for four cards with spacing 1.0 (scales with cardSpacing).
             var totalWidth = cardSpacing * (suits.Length - 1);
             var startX     = -totalWidth / 2f;
 
@@ -63,13 +61,11 @@ namespace DataViews
             {
                 var card = Instantiate(selectorCardPrefab, spawnAnchor);
 
-                // Place each card in local space relative to the anchor.
                 var localPos = new Vector3(startX + i * cardSpacing, 0f, 0f);
                 card.transform.localPosition = localPos;
-                card.Bind(suits[i]);
+                card.Bind(suits[i], selectorLabel);
                 card.SetRestState(localPos, card.transform.localScale);
 
-                // Capture loop variable for the lambda.
                 var chosenSuit = suits[i];
                 card.Selected += _ => Commit(chosenSuit);
 
@@ -96,7 +92,7 @@ namespace DataViews
             _onChosen = null;
         }
 
-        // Internal
+        // INTERNAL
 
         /// <summary>
         /// Despawns all selector cards, then fires the callback.

@@ -40,7 +40,7 @@ namespace DataViews
 
         private readonly List<CardView> _cardViews = new();
 
-        // Swap-picker state
+        // SWAP-PICKER STATE
 
         private enum SwapRole { None, Source, Candidate }
         private SwapRole _swapRole = SwapRole.None;
@@ -53,7 +53,7 @@ namespace DataViews
 
         private const string SwapTooltipText = "Swap to this adventurer's hand.";
 
-        // Rendering
+        // RENDERING
 
         public void Render(Player player, GameState state, TooltipView tooltipView)
         {
@@ -121,7 +121,7 @@ namespace DataViews
 
         private IEnumerable<Card> GetSortedCards(CardPile hand)
         {
-            return hand.Cards.OrderBy(c => c.Suit).ThenBy(c => c.Rank);
+            return hand.Cards.OrderBy(c => c.ActiveSuit).ThenBy(c => c.ActiveRank);
         }
 
         public void ApplyCurrentDimState(Player player, GameState state)
@@ -134,7 +134,7 @@ namespace DataViews
             }
         }
 
-        // Swap-picker mode
+        // SWAP-PICKER MODE
 
         /// <summary>
         /// Puts this hand into swap-picker mode.
@@ -217,7 +217,7 @@ namespace DataViews
             }
         }
 
-        // Swap-picker internal callbacks
+        // SWAP-PICKER INTERNAL CALLBACKS
 
         /// <summary>
         /// When the mouse enters any card in a candidate hand, raise the entire hand.

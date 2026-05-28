@@ -1,7 +1,5 @@
-using System;
 using DataClasses.BusinessLayer;
 using DataClasses.BusinessLayer.PendingDecisions;
-using DataClasses.Enums;
 
 namespace DataClasses.CardEffects
 {
@@ -9,15 +7,18 @@ namespace DataClasses.CardEffects
     {
         public override void Resolve(GameState state, Player source)
         {
-            // Set a sentinel suit so that nothing is playable until the real choice
-            // lands. GameManager will open the suit picker, wait for input, then
-            // call OnSuitChosen to commit the chosen suit and clear the decision.
-            state.ActiveSuit = Suit.Wild;
-
+            // The wild card is already in state.StagedCard (placed there by
+            // GameRules.PlayCard). When the player picks a suit, we lock that
+            // colour into the card's ActiveSuit and commit it to the discard pile.
+            // No sentinel is needed on GameState; ActionsAllowed == false while
+            // PendingDecision exists, so nothing else can interact with the board.
             state.PendingDecision = new PendingSuitChoice(
                 chosenSuit =>
                 {
-                    state.ActiveSuit = chosenSuit;
+                    var staged = state.StagedCard;
+                    staged.ActiveSuit = chosenSuit;
+                    state.DiscardPile.Add(staged);
+                    state.StagedCard = null;
                     state.PendingDecision = null;
                 }
             );

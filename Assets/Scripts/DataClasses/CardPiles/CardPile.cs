@@ -39,6 +39,11 @@ namespace DataClasses.CardPiles
                 // Reset the starting card flag since shuffling screws with the order
                 _cards[i].IsStartingCard = false;
 
+                // Restore wild cards (and any future rank/suit-mutating effects) to
+                // their original state so they don't carry play-state into the next round.
+                // Uncomment when the reshuffle / lives system is implemented:
+                // _cards[i].ResetActiveState();
+
                 var randomIndex = Random.Range(i, _cards.Count);
                 (_cards[i], _cards[randomIndex]) = (_cards[randomIndex], _cards[i]);
             }

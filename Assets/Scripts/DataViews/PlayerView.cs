@@ -50,7 +50,7 @@ namespace DataViews
             handView.ApplyCurrentDimState(_player, _state);
         }
 
-        // Swap-picker pass-throughs
+        // SWAP-PICKER PASS-THROUGHS
 
         /// <summary>
         /// Puts this player's hand into swap-picker mode.

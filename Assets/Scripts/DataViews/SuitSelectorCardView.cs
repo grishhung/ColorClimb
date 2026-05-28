@@ -34,16 +34,16 @@ namespace DataViews
         /// <summary>Fired when the player clicks (mouse-up while still hovering) this card.</summary>
         public event Action<Suit> Selected;
 
-        // Binding
+        // BINDING
 
-        public void Bind(Suit suit)
+        public void Bind(Suit suit, string label)
         {
             Suit = suit;
-            label.text = "WILD";
+            this.label.text = label;
             bodyRenderer.material.color = GetSuitColor(suit);
         }
 
-        // Rest-state registration (called by WildSuitSelectorView after placement)
+        // REST-STATE REGISTRATION (called by WildSuitSelectorView after placement)
 
         /// <summary>
         /// Records the card's intended resting position/scale so hover offsets are
@@ -57,7 +57,7 @@ namespace DataViews
             FlushTransform(false);
         }
 
-        // Unity mouse callbacks
+        // UNITY MOUSE CALLBACKS
 
         private void OnMouseEnter()
         {

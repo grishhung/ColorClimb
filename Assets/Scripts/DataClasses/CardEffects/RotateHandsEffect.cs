@@ -30,7 +30,9 @@ namespace DataClasses.CardEffects
             }
 
             for (var i = 0; i < state.Players.Count; i++)
+            {
                 state.Players[i].Hand = hands[i];
+            }
         }
 
         public override string GetDescription(GameState state)

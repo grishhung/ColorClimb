@@ -26,6 +26,7 @@ namespace DataViews
         [SerializeField] private Renderer backRenderer;
 
         private readonly Color _backColor = Color.rebeccaPurple * 1.25f;
+        private const float DimAmount = 0.5f;
 
         // Color / interaction state
         private Color _baseColor;
@@ -67,18 +68,18 @@ namespace DataViews
             FlushTransform();
         }
 
-        // Binding
+        // BINDING
 
         public void Bind(Card card)
         {
             Card = card;
-            _baseColor = GetSuitColor(Card.Suit);
-            label.text = GetDisplayText(Card);
+            _baseColor = GetSuitColor(card.ActiveSuit);
+            label.text = GetDisplayText(card.ActiveRank);
             label.fontStyle = label.text is "6" or "9" ? FontStyles.Underline : FontStyles.Normal;
             ApplyColor();
         }
 
-        // Unity mouse callbacks
+        // UNITY MOUSE CALLBACKS
 
         private void OnMouseEnter()
         {
@@ -131,7 +132,7 @@ namespace DataViews
             }
         }
 
-        // External hover control (for group-hover; e.g. pending draw block)
+        // EXTERNAL HOVER CONTROL (for group-hover; e.g. pending draw block)
 
         /// <summary>
         /// Applies or removes hover visuals from outside; used to group-hover cards that
@@ -152,7 +153,7 @@ namespace DataViews
             }
         }
 
-        // Public setters
+        // PUBLIC SETTERS
 
         public void SetCanHover(bool canHover)
         {
@@ -180,7 +181,7 @@ namespace DataViews
             _hoverScaleMultiplier = 1f;
         }
 
-        // Transform layer helpers
+        // TRANSFORM LAYER HELPERS
 
         /// <summary>
         /// Turns the hover offset layer on or off without touching _basePosition or _animationOffset.
@@ -209,7 +210,7 @@ namespace DataViews
             gameObject.transform.localScale = _baseScale * _hoverScaleMultiplier;
         }
 
-        // Jiggle animation
+        // JIGGLE ANIMATION
 
         private void TickJiggle()
         {
@@ -239,12 +240,12 @@ namespace DataViews
             _jiggleTimer -= JiggleUpdateRate;
         }
 
-        // Color helpers
+        // COLOR HELPERS
 
         private void ApplyHoverColor()
         {
             // TODO: Add edge highlighting; add separate visual for "illegal card" vs "not your turn"
-            var dimMultiplier = _isDimmed ? 0.5f : 1f;
+            var dimMultiplier = _isDimmed ? DimAmount : 1f;
 
             bodyRenderer.material.color = _baseColor * dimMultiplier * HoverScaleMultiplier;
             label.color = Color.white * dimMultiplier;
@@ -261,9 +262,9 @@ namespace DataViews
 
             if (_isDimmed)
             {
-                finalCardColor *= 0.5f;
-                finalBackColor *= 0.5f;
-                finalLabelColor *= 0.5f;
+                finalCardColor *= DimAmount;
+                finalBackColor *= DimAmount;
+                finalLabelColor *= DimAmount;
             }
 
             bodyRenderer.material.color = finalCardColor;
@@ -273,7 +274,7 @@ namespace DataViews
             backLabel.color = finalLabelColor;
         }
 
-        // Static lookup helpers
+        // STATIC LOOKUP HELPERS
 
         public static Color GetSuitColor(Suit suit)
         {
@@ -290,7 +291,12 @@ namespace DataViews
 
         public static string GetDisplayText(Card card)
         {
-            return card.Rank switch
+            return GetDisplayText(card.ActiveRank);
+        }
+
+        public static string GetDisplayText(Rank rank)
+        {
+            return rank switch
             {
                 Rank.Number0 => "0",
                 Rank.Number1 => "1",

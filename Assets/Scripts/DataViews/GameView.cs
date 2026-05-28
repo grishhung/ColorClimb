@@ -71,16 +71,16 @@ namespace DataViews
             discardPileView.Render(_state.DiscardPile, _state, tooltipView);
         }
 
-        // Picker panels
+        // PICKER PANELS
 
         /// <summary>
         /// Opens the suit picker modal. The callback fires once the player chooses;
         /// the panel closes itself before invoking it.
         /// </summary>
-        public void ShowSuitPicker(Action<Suit> onChosen)
+        public void ShowSuitPicker(Action<Suit> onChosen, string selectorLabel)
         {
             tooltipView.Hide();
-            wildSuitSelectorView.Show(onChosen);
+            wildSuitSelectorView.Show(onChosen, selectorLabel);
         }
 
         /// <summary>

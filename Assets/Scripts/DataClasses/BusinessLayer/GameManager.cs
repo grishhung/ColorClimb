@@ -40,7 +40,7 @@ namespace DataClasses.BusinessLayer
             Debug.Log("Game started");
         }
 
-        // Input handlers (synchronous entry points from the view layer)
+        // INPUT HANDLERS (synchronous entry points from the view layer)
 
         private void OnCardClicked(Player player, Card card)
         {
@@ -69,7 +69,7 @@ namespace DataClasses.BusinessLayer
             StartCoroutine(DrawCardRoutine());
         }
 
-        // Play-card coroutine
+        // PLAY-CARD COROUTINE
 
         /// <summary>
         /// Handles the full lifecycle of a card play:
@@ -97,19 +97,27 @@ namespace DataClasses.BusinessLayer
 
             Debug.Log($"Player played {card}");
 
-            // Step 3: Resolve any pending decision
+            // Step 3: Refresh the view immediately after state is mutated.
+            // This ensures the card is removed from the hand (and, for non-wilds,
+            // visible in the discard pile) before any decision panel opens, and
+            // that all interactive elements are correctly dimmed while the decision
+            // is pending (ActionsAllowed == false at this point if a decision was queued).
+            UpdateShaderGlobals();
+            gameView.Refresh();
+
+            // Step 4: Resolve any pending decision
             if (_state.PendingDecision != null)
             {
                 yield return ResolvePendingDecisionRoutine(player);
             }
 
-            // Step 4: Advance turn and refresh
+            // Step 5: Advance turn and refresh
             AdvanceTurn();
             UpdateShaderGlobals();
             gameView.Refresh();
         }
 
-        // Draw-card coroutine
+        // DRAW-CARD COROUTINE
 
         private IEnumerator DrawCardRoutine()
         {
@@ -159,7 +167,7 @@ namespace DataClasses.BusinessLayer
             yield break;
         }
 
-        // Decision resolver
+        // DECISION RESOLVER
 
         /// <summary>
         /// Inspects the current PendingDecision, opens the matching UI panel, and
@@ -175,12 +183,13 @@ namespace DataClasses.BusinessLayer
         {
             if (_state.PendingDecision is PendingSuitChoice suitChoice)
             {
+                var label = CardView.GetDisplayText(suitChoice.PlayedRank);
                 gameView.ShowSuitPicker(suit =>
                 {
                     // The callback commits the choice and clears PendingDecision.
                     suitChoice.OnSuitChosen(suit);
                     Debug.Log($"Suit chosen: {suit}");
-                });
+                }, label);
             }
             else if (_state.PendingDecision is PendingSwapTargetChoice swapChoice)
             {
@@ -199,7 +208,7 @@ namespace DataClasses.BusinessLayer
             }
         }
 
-        // Turn management
+        // TURN MANAGEMENT
 
         private void AdvanceTurn()
         {
@@ -224,7 +233,7 @@ namespace DataClasses.BusinessLayer
             };
         }
 
-        // Setup
+        // SETUP
 
         private void DealStartingHands()
         {
@@ -241,14 +250,14 @@ namespace DataClasses.BusinessLayer
             }
         }
 
-        // TODO: Fix softlocking if a wild card is drawn first
-        // (Draw something else until we get a non-wild)
         private void InitializeDiscardPile()
         {
             var firstCard = _state.DrawPile.Draw();
             firstCard.IsStartingCard = true;
             _state.DiscardPile.Add(firstCard);
-            _state.ActiveSuit = firstCard.Suit;
+            // No ActiveSuit assignment needed; firstCard.ActiveSuit is already correct.
+            // TODO: Fix softlocking if a wild card is drawn first
+            // (Draw something else until we get a non-wild)
         }
 
         private static void CreateStartingDeck(CardPile drawPile)
