@@ -26,16 +26,29 @@ namespace DataClasses.BusinessLayer
             CreateStartingDeck(_state.DrawPile);
             _state.DrawPile.Shuffle();
 
-            DealStartingHands();
-            InitializeDiscardPile();
+            // Hands are populated by the deal animation coroutine rather than
+            // immediately, so we only add empty Player entries here
+            for (var i = 0; i < PlayerCount; i++)
+            {
+                _state.Players.Add(new Player(new Hand()));
+            }
 
+            // InitializeDiscardPile() is called inside DealAnimationRoutine just
+            // before phase 3 so the starting card lands as part of the animation
             UpdateShaderGlobals();
 
             gameView.Bind(_state);
             gameView.CardClicked += OnCardClicked;
             gameView.DrawPileClicked += OnDrawPileClicked;
 
+            // Set the flag before Refresh so the draw pile renders with its top card
+            // already dimmed and non-interactive. StartCoroutine defers to the next
+            // frame, so without this the flag would still be false when Refresh runs
+            _state.IsDealAnimating = true;
+
             gameView.Refresh();
+
+            StartCoroutine(DealAnimationRoutine());
 
             Debug.Log("Game started");
         }
@@ -67,6 +80,59 @@ namespace DataClasses.BusinessLayer
             }
 
             StartCoroutine(DrawCardRoutine());
+        }
+
+        // DEAL ANIMATION COROUTINE
+
+        /// <summary>
+        /// Runs the three-phase opening deal animation, then starts gameplay.
+        ///
+        /// Phase 1 (lift): StartingHandSize * PlayerCount cards rise off the draw pile
+        ///   one at a time, easing in upward to CeilingHeight.
+        ///
+        /// Phase 2 (land hands): all four players' cards land simultaneously in their
+        ///   hands, staggered per card, easing out.
+        ///
+        /// Phase 3 (land discard): the starting discard card falls from CeilingHeight
+        ///   onto the discard pile, easing out.
+        ///
+        /// IsDealAnimating is held true for the full duration so no gameplay input can
+        /// slip through. It is cleared only after all three phases complete.
+        /// </summary>
+        private IEnumerator DealAnimationRoutine()
+        {
+            // IsDealAnimating is already set in Start() before Refresh(), so the
+            // draw pile renders dimmed from the very first frame.
+
+            var totalCards = StartingHandSize * PlayerCount;
+
+            // Phase 1: lift all cards off the draw pile up to CeilingHeight.
+            yield return gameView.PlayDealLiftAnimation(totalCards);
+
+            // Populate the hand data model now that the lift is done. The land
+            // animation reads from each player's Hand, so this must happen before
+            // phase 2 starts.
+            for (var i = 0; i < PlayerCount; i++)
+            {
+                for (var j = 0; j < StartingHandSize; j++)
+                {
+                    _state.Players[i].Hand.Add(_state.DrawPile.Draw());
+                }
+            }
+
+            // Phase 2: land each card into its player's hand view.
+            yield return gameView.PlayDealLandAnimation(_state);
+
+            // Phase 3: flip the starting discard card down from the ceiling.
+            InitializeDiscardPile();
+            yield return gameView.PlayDiscardDealAnimation(_state);
+
+            _state.IsDealAnimating = false;
+
+            UpdateShaderGlobals();
+            gameView.Refresh();
+
+            Debug.Log("Deal animation complete; gameplay started");
         }
 
         // PLAY-CARD COROUTINE
@@ -234,21 +300,6 @@ namespace DataClasses.BusinessLayer
         }
 
         // SETUP
-
-        private void DealStartingHands()
-        {
-            for (var i = 0; i < PlayerCount; i++)
-            {
-                Hand hand = new();
-
-                for (var j = 0; j < StartingHandSize; j++)
-                {
-                    hand.Add(_state.DrawPile.Draw());
-                }
-
-                _state.Players.Add(new Player(hand));
-            }
-        }
 
         private void InitializeDiscardPile()
         {

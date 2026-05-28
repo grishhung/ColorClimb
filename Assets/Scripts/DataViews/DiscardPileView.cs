@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DataClasses.BusinessLayer;
@@ -22,6 +23,9 @@ namespace DataViews
 
         private readonly List<CardView> _cardViews = new();
 
+        // Duration for the starting card's land tween; matches the hand land duration
+        private const float LandTweenDuration = 0.3f;
+
         public void Render(CardPile pile, GameState state, TooltipView tooltipView)
         {
             Clear();
@@ -35,6 +39,65 @@ namespace DataViews
 
             Layout(state, tooltipView);
         }
+
+        // DEAL LAND ANIMATION
+
+        /// <summary>
+        /// Animates the starting card landing on the discard pile. The card view is
+        /// created at its final rest position with a Y animation offset of CeilingHeight,
+        /// then tweens downward to Y = 0 easing out, matching the feel of the hand deal.
+        ///
+        /// Layout() is called internally after the tween so rest-state and tooltip wiring
+        /// are applied correctly; the caller does not need to call Render() afterward.
+        ///
+        /// Yields until the card has fully landed.
+        /// </summary>
+        public IEnumerator PlayDealLandAnimation(GameState state, TooltipView tooltipView)
+        {
+            Clear();
+
+            var startingCard = state.DiscardPile.Cards.LastOrDefault();
+            if (startingCard == null)
+            {
+                yield break;
+            }
+
+            var cardView = Instantiate(cardPrefab, spawnPoint);
+            cardView.Bind(startingCard);
+            cardView.SetCanHover(false);
+            cardView.SetDimmed(true);
+            _cardViews.Add(cardView);
+
+            // Position the card at its final rest transform before the tween so that
+            // Layout()'s world-space adjustments (displacement, rotation, spacing) are
+            // already baked in; the tween only moves the animation Y offset layer
+            Layout(state, tooltipView);
+
+            // Override the animation Y offset to start from CeilingHeight.
+            cardView.SetAnimationYOffset(DrawPileView.CeilingHeight);
+
+            var elapsed = 0f;
+
+            while (elapsed < LandTweenDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / LandTweenDuration);
+
+                // Ease out: 1 - (1-t)^2 (starts fast, decelerates into the landing position)
+                var eased = 1f - (1f - t) * (1f - t);
+
+                cardView.SetAnimationYOffset(Mathf.Lerp(DrawPileView.CeilingHeight, 0f, eased));
+                yield return null;
+            }
+
+            cardView.SetAnimationYOffset(0f);
+
+            // Restore normal interactivity now that the card has landed
+            cardView.SetDimmed(false);
+            cardView.SetCanHover(true);
+        }
+
+        // NORMAL RENDERING
 
         private void Layout(GameState state, TooltipView tooltipView)
         {

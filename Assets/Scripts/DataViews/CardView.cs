@@ -11,7 +11,7 @@ namespace DataViews
     ///
     /// Transform compositing; the final localPosition is the sum of three independent layers:
     ///   _basePosition    : the layout anchor assigned by the parent view; never changes at runtime
-    ///   _animationOffset : written each animation tick (e.g. jiggle); always XZ-only
+    ///   _animationOffset : written each animation tick (e.g. jiggle, deal); XZ for jiggle, Y for deal
     ///   _hoverOffset     : applied while the cursor is over the card; always Y-only
     ///
     /// Each layer is written independently, and FlushTransform() recomposes them every frame.
@@ -38,7 +38,7 @@ namespace DataViews
         private Vector3 _basePosition;
         private Vector3 _baseScale;
 
-        // Transform layer 2: animation offset (XZ jiggle, future animations)
+        // Transform layer 2: animation offset (XZ for jiggle; Y for deal lift/land)
         private Vector3 _animationOffset;
 
         // Transform layer 3: hover lift (Y only)
@@ -181,6 +181,17 @@ namespace DataViews
             _hoverScaleMultiplier = 1f;
         }
 
+        /// <summary>
+        /// Writes the Y component of the animation offset layer directly.
+        /// Used by the deal animation to lift and land cards without touching the
+        /// XZ jiggle component. The jiggle path only ever writes X and Z, so there
+        /// is no collision between the two.
+        /// </summary>
+        public void SetAnimationYOffset(float y)
+        {
+            _animationOffset = new Vector3(_animationOffset.x, y, _animationOffset.z);
+        }
+
         // TRANSFORM LAYER HELPERS
 
         /// <summary>
@@ -216,7 +227,8 @@ namespace DataViews
         {
             if (JiggleAmount <= 0f)
             {
-                _animationOffset = Vector3.zero;
+                // Clear only the XZ components; Y belongs to the deal animation layer
+                _animationOffset = new Vector3(0f, _animationOffset.y, 0f);
                 return;
             }
 
@@ -233,8 +245,8 @@ namespace DataViews
             var xOffset = radius * Mathf.Cos(angle);
             var zOffset = radius * Mathf.Sin(angle);
 
-            // Jiggle lives entirely in the XZ plane; _hoverOffset owns the Y axis
-            _animationOffset = new Vector3(xOffset, 0f, zOffset);
+            // Jiggle lives entirely in the XZ plane; Y is owned by the deal animation layer
+            _animationOffset = new Vector3(xOffset, _animationOffset.y, zOffset);
 
             // Keep excess time to maintain tick accuracy
             _jiggleTimer -= JiggleUpdateRate;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
 using UnityEngine;
@@ -50,12 +51,23 @@ namespace DataViews
             handView.ApplyCurrentDimState(_player, _state);
         }
 
+        // DEAL ANIMATION PASS-THROUGH
+
+        /// <summary>
+        /// Delegates to HandView to run the deal land animation for this player.
+        /// See HandView.PlayDealLandAnimation for full details.
+        /// </summary>
+        public IEnumerator PlayDealLandAnimation(GameState state, TooltipView tooltipView)
+        {
+            yield return handView.PlayDealLandAnimation(_player, state, tooltipView);
+        }
+
         // SWAP-PICKER PASS-THROUGHS
 
         /// <summary>
         /// Puts this player's hand into swap-picker mode.
-        /// isSource == true  → the player who played the 7 (hand dims, no interaction).
-        /// isSource == false → a chooseable swap target (undimmed, group-hover, clickable).
+        /// isSource == true  -> the player who played the 7 (hand dims, no interaction).
+        /// isSource == false -> a chooseable swap target (undimmed, group-hover, clickable).
         /// </summary>
         public void EnterSwapPickerMode(bool isSource)
         {

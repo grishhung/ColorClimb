@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
@@ -69,6 +70,71 @@ namespace DataViews
 
             drawPileView.Render(_state.DrawPile, _state.PendingDrawCount, _state, tooltipView);
             discardPileView.Render(_state.DiscardPile, _state, tooltipView);
+        }
+
+        // DEAL ANIMATION PASS-THROUGHS
+
+        /// <summary>
+        /// Animates the starting card falling from CeilingHeight onto the discard pile.
+        /// See DiscardPileView.PlayDealLandAnimation for full details.
+        /// </summary>
+        public IEnumerator PlayDiscardDealAnimation(GameState state)
+        {
+            yield return discardPileView.PlayDealLandAnimation(state, tooltipView);
+        }
+
+        /// <summary>
+        /// Delegates to DrawPileView to lift <paramref name="totalCards"/> cards up to
+        /// CeilingHeight. See DrawPileView.PlayLiftAnimation for full details.
+        /// </summary>
+        public IEnumerator PlayDealLiftAnimation(int totalCards)
+        {
+            yield return drawPileView.PlayLiftAnimation(totalCards);
+        }
+
+        /// <summary>
+        /// Deals cards from the pre-populated game state hands into their respective
+        /// PlayerViews using the land animation. Cards appear at CeilingHeight and tween
+        /// down to their rest positions. All four players animate simultaneously; cards
+        /// within each hand still stagger individually via HandView.LandStaggerInterval.
+        ///
+        /// Each player's hand already contains its cards (GameManager dealt them before
+        /// calling this) but no card views exist yet; each PlayerView creates its views
+        /// here as part of the animation.
+        /// </summary>
+        public IEnumerator PlayDealLandAnimation(GameState state)
+        {
+            var coroutinesFinished = 0;
+
+            foreach (var playerView in _playerViews)
+            {
+                // All players' land sequences start at the same time; cards within
+                // each hand still stagger individually via LandStaggerInterval
+                var playerDelay = 0f;
+
+                StartCoroutine(DelayedLandRoutine(playerView, state, playerDelay, () =>
+                {
+                    coroutinesFinished++;
+                }));
+            }
+
+            yield return new WaitUntil(() => coroutinesFinished >= _playerViews.Count);
+        }
+
+        /// <summary>
+        /// Waits <paramref name="delay"/> seconds, then runs the land animation for one
+        /// PlayerView and invokes <paramref name="onComplete"/> when it finishes.
+        /// </summary>
+        private IEnumerator DelayedLandRoutine(PlayerView playerView, GameState state, float delay, Action onComplete)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            yield return playerView.PlayDealLandAnimation(state, tooltipView);
+
+            onComplete?.Invoke();
         }
 
         // PICKER PANELS

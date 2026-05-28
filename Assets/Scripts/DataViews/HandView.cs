@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DataClasses.BusinessLayer;
@@ -53,6 +54,13 @@ namespace DataViews
 
         private const string SwapTooltipText = "Swap to this adventurer's hand.";
 
+        // Duration for a single card's land tween.
+        private const float LandTweenDuration = 0.3f;
+
+        // Stagger between the start of each card's land tween.
+        // Public so GameView can compute per-player delays from the same value.
+        public const float LandStaggerInterval = 0.05f;
+
         // RENDERING
 
         public void Render(Player player, GameState state, TooltipView tooltipView)
@@ -76,10 +84,112 @@ namespace DataViews
             ApplyCurrentDimState(player, state);
         }
 
-        private void OnCardClicked(CardView view)
+        // DEAL LAND ANIMATION
+
+        /// <summary>
+        /// Spawns card views for <paramref name="cards"/> at their final layout positions
+        /// plus CeilingHeight on the Y axis, then tweens each one downward to its rest
+        /// position, staggered by LandStaggerInterval seconds, easing out (starts fast,
+        /// decelerates into the landing position).
+        ///
+        /// Called by PlayerView during the deal animation phase. At the point this runs,
+        /// the hand data model is already populated (GameManager dealt into it before
+        /// triggering the animation) but no card views exist yet, so this method
+        /// creates them.
+        ///
+        /// Yields until all cards have landed.
+        /// </summary>
+        public IEnumerator PlayDealLandAnimation(Player player, GameState state, TooltipView tooltipView)
         {
-            CardClicked?.Invoke(view.Card);
+            _tooltipView = tooltipView;
+            Clear();
+
+            var cards = GetSortedCards(player.Hand).ToList();
+
+            // Pre-compute layout positions so we can apply the ceiling offset before
+            // handing off to the tween
+            var layoutPositions = ComputeLayoutPositions(cards.Count);
+
+            for (var i = 0; i < cards.Count; i++)
+            {
+                var view = Instantiate(cardPrefab, cardParent);
+                view.Bind(cards[i]);
+
+                // Place the card at its final rest position + ceiling offset so it starts
+                // at CeilingHeight and needs to animate down to Y = 0 in animation space
+                var restPos = layoutPositions[i].position;
+                view.transform.localPosition = restPos;
+                view.transform.localEulerAngles = layoutPositions[i].rotation;
+                view.SetRestState(restPos, view.transform.localScale);
+                view.SetAnimationYOffset(DrawPileView.CeilingHeight);
+                view.SetCanHover(false);
+                view.SetDimmed(true);
+
+                // Wire events; the card is not interactive yet but we wire now so Render()
+                // is not required again after the animation finishes
+                view.Selected += OnCardClicked;
+                view.Selected += _ => tooltipView.Hide();
+                view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
+                view.MouseExited += _ => tooltipView.Hide();
+
+                _cardViews.Add(view);
+            }
+
+            var tweensFinished = 0;
+
+            for (var i = 0; i < _cardViews.Count; i++)
+            {
+                var cardView = _cardViews[i];
+                var delay = i * LandStaggerInterval;
+
+                StartCoroutine(LandCardTween(cardView, delay, () =>
+                {
+                    tweensFinished++;
+                }));
+            }
+
+            yield return new WaitUntil(() => tweensFinished >= _cardViews.Count);
+
+            // Restore normal interactivity after all cards have landed
+            ApplyCurrentDimState(player, state);
+            foreach (var cv in _cardViews)
+            {
+                cv.SetCanHover(true);
+            }
         }
+
+        /// <summary>
+        /// Animates a single card falling from Y = CeilingHeight to Y = 0 in animation
+        /// space, easing out (1 - (1-t)^2; starts fast, decelerates). Waits
+        /// <paramref name="delay"/> seconds before starting, then invokes
+        /// <paramref name="onComplete"/> when done.
+        /// </summary>
+        private IEnumerator LandCardTween(CardView cardView, float delay, Action onComplete)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < LandTweenDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / LandTweenDuration);
+
+                // Ease out: 1 - (1-t)^2 (starts fast, slows to a stop)
+                var eased = 1f - (1f - t) * (1f - t);
+
+                cardView.SetAnimationYOffset(Mathf.Lerp(DrawPileView.CeilingHeight, 0f, eased));
+                yield return null;
+            }
+
+            cardView.SetAnimationYOffset(0f);
+            onComplete?.Invoke();
+        }
+
+        // LAYOUT HELPERS
 
         private void Layout()
         {
@@ -88,12 +198,38 @@ namespace DataViews
                 return;
             }
 
-            var cardGaps = _cardViews.Count - 1;
+            var positions = ComputeLayoutPositions(_cardViews.Count);
+
+            for (var i = 0; i < _cardViews.Count; i++)
+            {
+                _cardViews[i].transform.localPosition = positions[i].position;
+                _cardViews[i].transform.localEulerAngles = positions[i].rotation;
+                _cardViews[i].SetRestState(_cardViews[i].transform.localPosition, _cardViews[i].transform.localScale);
+                _cardViews[i].SetCanHover(true);
+            }
+        }
+
+        /// <summary>
+        /// Returns the final local position and euler rotation for each card slot
+        /// based on the fan layout, without moving any actual GameObjects.
+        /// Both Layout() and PlayDealLandAnimation() call this so their positioning
+        /// logic stays in sync.
+        /// </summary>
+        private List<(Vector3 position, Vector3 rotation)> ComputeLayoutPositions(int count)
+        {
+            var result = new List<(Vector3, Vector3)>(count);
+
+            if (count == 0)
+            {
+                return result;
+            }
+
+            var cardGaps = count - 1;
             var totalAngle = Mathf.Min(cardGaps * individualSpacing, maxSpacing);
             var spacingAngle = cardGaps > 0 ? totalAngle / cardGaps : 0f;
             var startAngle = -totalAngle / 2f;
 
-            for (var i = 0; i < _cardViews.Count; i++)
+            for (var i = 0; i < count; i++)
             {
                 var angle = startAngle + i * spacingAngle;
                 var radians = Mathf.Deg2Rad * (angle + 90);
@@ -101,11 +237,18 @@ namespace DataViews
                 var x = fanRadius * Mathf.Cos(radians);
                 var z = fanRadius * Mathf.Sin(radians) - fanRadius;
 
-                _cardViews[i].transform.localPosition = new Vector3(-x, 0, z);
-                _cardViews[i].transform.localEulerAngles = new Vector3(0, angle, cardTilt);
-                _cardViews[i].SetRestState(_cardViews[i].transform.localPosition, _cardViews[i].transform.localScale);
-                _cardViews[i].SetCanHover(true);
+                var position = new Vector3(-x, 0, z);
+                var rotation = new Vector3(0, angle, cardTilt);
+
+                result.Add((position, rotation));
             }
+
+            return result;
+        }
+
+        private void OnCardClicked(CardView view)
+        {
+            CardClicked?.Invoke(view.Card);
         }
 
         private void Clear()
@@ -139,9 +282,9 @@ namespace DataViews
         /// <summary>
         /// Puts this hand into swap-picker mode.
         ///
-        ///   isSource == true  → source hand: dim all cards, disable hover/click.
-        ///   isSource == false → candidate hand: undim all cards, enable group-hover
-        ///                       and hand-level click detection.
+        ///   isSource == true  -> source hand: dim all cards, disable hover/click.
+        ///   isSource == false -> candidate hand: undim all cards, enable group-hover
+        ///                        and hand-level click detection.
         /// </summary>
         public void EnterSwapPickerMode(bool isSource)
         {
@@ -229,7 +372,7 @@ namespace DataViews
         }
 
         /// <summary>
-        /// When the mouse exits any card in a candidate hand, lower the entire hand —
+        /// When the mouse exits any card in a candidate hand, lower the entire hand;
         /// but only if the cursor is no longer over any card in the hand.
         /// </summary>
         private void OnSwapCandidateCardExited(CardView _)

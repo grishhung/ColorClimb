@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using DataClasses.BusinessLayer;
 using DataClasses.CardPiles;
@@ -18,8 +19,18 @@ namespace DataViews
 
         private readonly List<CardView> _cardViews = new();
         private int _pendingDrawCount;
-        
+
         private const float MaxJiggleAmount = 0.1f;
+
+        // The Y height (in local space, relative to the draw pile's base position)
+        // that cards tween up to during the deal lift phase before flying to hand
+        public const float CeilingHeight = 15f;
+
+        // Duration for a single card's lift tween
+        private const float LiftTweenDuration = 0.3f;
+
+        // Stagger between the start of each card's lift tween
+        private const float LiftStaggerInterval = 0.05f;
 
         public event Action DrawPileClicked;
 
@@ -38,10 +49,81 @@ namespace DataViews
             Layout(state, tooltipView);
         }
 
+        // DEAL LIFT ANIMATION
+
+        /// <summary>
+        /// Lifts the top <paramref name="cardCount"/> cards off the draw pile one at a time,
+        /// staggered by LiftStaggerInterval seconds each, easing in upward to CeilingHeight.
+        ///
+        /// The cards are left in place (still parented to the draw pile's spawnPoint) with their
+        /// animation Y offset at CeilingHeight when the coroutine finishes. HandView is
+        /// responsible for de-parenting and landing them in the correct hands.
+        ///
+        /// Yields until every tween has completed.
+        /// </summary>
+        public IEnumerator PlayLiftAnimation(int cardCount)
+        {
+            // The cards to lift are the topmost ones in _cardViews (the last cardCount entries)
+            var liftStartIndex = Mathf.Max(0, _cardViews.Count - cardCount);
+            var tweensRunning = 0;
+            var tweensFinished = 0;
+
+            for (var i = liftStartIndex; i < _cardViews.Count; i++)
+            {
+                var cardView = _cardViews[i];
+                tweensRunning++;
+
+                // Capture index so the lambda can compute its own start time
+                var localIndex = i - liftStartIndex;
+
+                StartCoroutine(LiftCardTween(cardView, localIndex * LiftStaggerInterval, () =>
+                {
+                    tweensFinished++;
+                }));
+            }
+
+            // Wait until every tween has finished
+            yield return new WaitUntil(() => tweensFinished >= tweensRunning);
+        }
+
+        /// <summary>
+        /// Animates a single card rising from Y = 0 to Y = CeilingHeight, easing in
+        /// (starts slow, accelerates). Waits <paramref name="delay"/> seconds before starting.
+        /// Invokes <paramref name="onComplete"/> when done.
+        /// </summary>
+        private IEnumerator LiftCardTween(CardView cardView, float delay, Action onComplete)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            var elapsed = 0f;
+
+            while (elapsed < LiftTweenDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / LiftTweenDuration);
+
+                // Ease in: t^2 (starts slow, finishes fast).
+                var eased = t * t;
+
+                cardView.SetAnimationYOffset(Mathf.Lerp(0f, CeilingHeight, eased));
+                yield return null;
+            }
+
+            cardView.SetAnimationYOffset(CeilingHeight);
+            onComplete?.Invoke();
+        }
+
+        // NORMAL RENDERING
+
         private void Layout(GameState state, TooltipView tooltipView)
         {
             if (_cardViews.Count == 0)
+            {
                 return;
+            }
 
             var floatStartIndex = Mathf.Max(0, _cardViews.Count - _pendingDrawCount);
 
@@ -58,9 +140,9 @@ namespace DataViews
                     // Make the card float
                     var floatingIndex = i - floatStartIndex;
                     yOffset = individualSpacing * floatStartIndex
-                              + pendingDrawLift 
+                              + pendingDrawLift
                               + floatingCardSpacing * floatingIndex;
-                    
+
                     // Make the card jiggle proportionally to the pending draw amount
                     cardView.JiggleAmount = Mathf.Min(MaxJiggleAmount, _pendingDrawCount * (MaxJiggleAmount / 16));
                 }
@@ -102,14 +184,24 @@ namespace DataViews
                     card.MouseEntered += _ =>
                     {
                         foreach (var c in floatingCards)
-                            if (c != card) c.SetHoverState(true);
+                        {
+                            if (c != card)
+                            {
+                                c.SetHoverState(true);
+                            }
+                        }
                         tooltipView.Show(burstTooltip, Mouse.current.position.ReadValue());
                     };
 
                     card.MouseExited += _ =>
                     {
                         foreach (var c in floatingCards)
-                            if (c != card) c.SetHoverState(false);
+                        {
+                            if (c != card)
+                            {
+                                c.SetHoverState(false);
+                            }
+                        }
                         tooltipView.Hide();
                     };
 
