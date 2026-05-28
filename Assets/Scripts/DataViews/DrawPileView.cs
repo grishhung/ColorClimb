@@ -35,10 +35,10 @@ namespace DataViews
                 _cardViews.Add(cardView);
             }
 
-            Layout(tooltipView);
+            Layout(state, tooltipView);
         }
 
-        private void Layout(TooltipView tooltipView)
+        private void Layout(GameState state, TooltipView tooltipView)
         {
             if (_cardViews.Count == 0)
                 return;
@@ -76,18 +76,21 @@ namespace DataViews
                 cardViewTransform.localEulerAngles = new Vector3(0f, 0f, 180f);
 
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
-                cardView.SetDimmed(_pendingDrawCount > 0 && !isFloating && i == floatStartIndex - 1);
 
-                // All floating cards are hoverable and clickable, not just the top one
-                cardView.SetCanHover(isFloating || i == _cardViews.Count - 1);
+                // A card is clickable when actions are allowed and it's either
+                // a floating (pending-draw) card or the lone top card in normal play.
+                var isClickable = state.ActionsAllowed && (isFloating || i == _cardViews.Count - 1);
+
+                cardView.SetDimmed(!isClickable);
+                cardView.SetCanHover(isClickable);
             }
 
             if (_pendingDrawCount > 0)
             {
                 // Build the tooltip string for the burst
                 var burstTooltip = _pendingDrawCount == 1
-                    ? "Draw {1} card and end your turn."
-                    : $"Draw {{{_pendingDrawCount}}} cards and end your turn.";
+                    ? "Draw {1} card and {end your turn}."
+                    : $"Draw {{{_pendingDrawCount}}} cards and {{end your turn}}.";
 
                 var floatingCards = _cardViews.GetRange(floatStartIndex, _cardViews.Count - floatStartIndex);
 
@@ -123,7 +126,7 @@ namespace DataViews
                 var topCard = _cardViews[^1];
 
                 topCard.MouseEntered += _ => tooltipView.Show(
-                    "Draw {1} card and end your turn.",
+                    "Draw {1} card.",
                     Mouse.current.position.ReadValue());
                 topCard.MouseExited += _ => tooltipView.Hide();
                 topCard.Selected += _ =>
