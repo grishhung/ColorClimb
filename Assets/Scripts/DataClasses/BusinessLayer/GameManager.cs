@@ -14,6 +14,8 @@ namespace DataClasses.BusinessLayer
 
         [SerializeField] private GameView gameView;
 
+        // TODO: Make StartingHandSize not constant
+        // We might allow more cards to be drawn at the start
         private const int PlayerCount = 4;
         private const int StartingHandSize = 7;
 

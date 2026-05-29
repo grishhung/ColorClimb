@@ -149,13 +149,6 @@ namespace DataViews
             }
 
             yield return new WaitUntil(() => tweensFinished >= _cardViews.Count);
-
-            // Restore normal interactivity after all cards have landed
-            ApplyCurrentDimState(player, state);
-            foreach (var cv in _cardViews)
-            {
-                cv.SetCanHover(true);
-            }
         }
 
         /// <summary>
