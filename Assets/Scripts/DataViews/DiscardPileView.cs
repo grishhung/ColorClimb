@@ -68,13 +68,32 @@ namespace DataViews
             cardView.SetDimmed(true);
             _cardViews.Add(cardView);
 
-            // Position the card at its final rest transform before the tween so that
-            // Layout()'s world-space adjustments (displacement, rotation, spacing) are
-            // already baked in; the tween only moves the animation Y offset layer
+            // Bake the final rest transform (displacement, rotation, spacing) into the
+            // card view. Layout() calls SetRestState(), which records _basePosition and
+            // resets _animationOffset to zero.
             Layout(state, tooltipView);
 
-            // Override the animation Y offset to start from CeilingHeight.
+            // After Layout(), cardView.transform.localPosition holds the baked rest
+            // position (the result of the world-space += mutations). Capture it so we
+            // can write transform.localPosition directly.
+            var restLocalPos = cardView.transform.localPosition;
+
+            // SetRestState() (called inside Layout()) sets _basePosition = restLocalPos
+            // and zeroes _animationOffset. FlushTransform() will therefore output
+            // restLocalPos on the next Update() -- which would show the card at the table
+            // surface for one frame before the tween begins.
+            //
+            // To prevent that flash we set both the logical layer AND the physical
+            // transform to the ceiling position right now, before yielding. This matches
+            // HandView's approach of writing transform.localPosition directly so the card
+            // is never visible at Y = 0.
             cardView.SetAnimationYOffset(DrawPileView.CeilingHeight);
+            cardView.transform.localPosition = restLocalPos + Vector3.up * DrawPileView.CeilingHeight;
+
+            // Layout() also overrides the dim/hover flags we set above, because it
+            // treats this as the sole top card. Re-apply the animation-phase values.
+            cardView.SetCanHover(false);
+            cardView.SetDimmed(true);
 
             var elapsed = 0f;
 
