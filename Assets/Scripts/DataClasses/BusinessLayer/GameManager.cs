@@ -106,7 +106,8 @@ namespace DataClasses.BusinessLayer
             // IsDealAnimating is already set in Start() before Refresh(), so the
             // draw pile renders dimmed from the very first frame.
 
-            var totalCards = StartingHandSize * PlayerCount;
+            // Add one for the first card in the discard pile at the start of the round
+            var totalCards = StartingHandSize * PlayerCount + 1;
 
             // Phase 1: lift all cards off the draw pile up to CeilingHeight.
             yield return gameView.PlayDealLiftAnimation(totalCards);

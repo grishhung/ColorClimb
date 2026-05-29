@@ -73,8 +73,10 @@ namespace DataViews
                 var cardView = _cardViews[i];
                 tweensRunning++;
 
-                // Capture index so the lambda can compute its own start time
-                var localIndex = i - liftStartIndex;
+                // The topmost card (highest index) gets localIndex 0 and lifts first;
+                // each card below it waits one additional stagger interval, so the
+                // animation reads top-to-bottom as expected.
+                var localIndex = (_cardViews.Count - 1) - i;
 
                 StartCoroutine(LiftCardTween(cardView, localIndex * LiftStaggerInterval, () =>
                 {
