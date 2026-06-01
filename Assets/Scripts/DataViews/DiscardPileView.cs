@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DataClasses.BusinessLayer;
+using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardPiles;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -148,8 +149,13 @@ namespace DataViews
 
                 // Need to set this otherwise the card will vanish on mouse hover
                 cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
-                cardView.SetDimmed(i < _cardViews.Count - 1);
-                cardView.SetCanHover(i == _cardViews.Count - 1);
+                // Dim all non-top cards unconditionally; dim the top card too while
+                // the suit selector is open (a wild was just played and the discard
+                // pile's active suit is not yet decided).
+                var isTop = i == _cardViews.Count - 1;
+                var suitSelectorOpen = state.PendingDecision is PendingSuitChoice;
+                cardView.SetDimmed(!isTop || suitSelectorOpen);
+                cardView.SetCanHover(isTop && !suitSelectorOpen);
             }
 
             // Wire tooltip to the top card only
