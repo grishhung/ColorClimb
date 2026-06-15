@@ -143,10 +143,16 @@ namespace DataClasses.BusinessLayer
         /// <summary>
         /// Handles the full lifecycle of a card play:
         ///   1. Realign turn to the jump-in player (if applicable).
-        ///   2. Mutate game state via GameRules.PlayCard (effects fire here).
-        ///   3. If an effect queued a PendingDecision, open the appropriate UI panel
+        ///   2. Read the card's current world position from the hand view (before it
+        ///      is destroyed by the upcoming Refresh).
+        ///   3. Mutate game state via GameRules.PlayCard (effects fire here). For
+        ///      non-wild cards the card is now in the discard pile in data.
+        ///   4. Start the fly animation (fire-and-forget; does not block gameplay).
+        ///   5. Refresh the view; hands re-render, but the discard pile view reuses
+        ///      its persistent pool so the in-flight card view is not destroyed.
+        ///   6. If an effect queued a PendingDecision, open the appropriate UI panel
         ///      and yield until the player resolves it.
-        ///   4. Advance the turn and refresh the view.
+        ///   7. Advance the turn and refresh the view.
         /// </summary>
         private IEnumerator PlayCardRoutine(Player player, Card card)
         {
@@ -161,26 +167,35 @@ namespace DataClasses.BusinessLayer
 
             _state.SkipCount = pendingSkips;
 
-            // Step 2: Apply the card to game state
+            // Step 2: Read the hand card's world transform now, before Refresh destroys
+            // the hand views. We capture both position and rotation while the view still
+            // exists, then pass them to the fly animation after the state mutation.
+            var cardStartTransform = gameView.GetCardWorldTransform(player, card);
+
+            // Step 3: Apply the card to game state (removes it from hand; for non-wilds,
+            // adds it to the discard pile immediately)
             GameRules.PlayCard(_state, player, card);
+
+            // Step 4 (part a): Launch the fly animation now that the card is committed to
+            // the discard pile in the data model. The coroutine is fire-and-forget.
+            gameView.StartPlayCardFlyAnimation(card, cardStartTransform, _state);
 
             Debug.Log($"Player played {card}");
 
-            // Step 3: Refresh the view immediately after state is mutated.
-            // This ensures the card is removed from the hand (and, for non-wilds,
-            // visible in the discard pile) before any decision panel opens, and
-            // that all interactive elements are correctly dimmed while the decision
-            // is pending (ActionsAllowed == false at this point if a decision was queued).
+            // Step 4 (part b): Refresh all views. The discard pile view reuses its persistent
+            // card view pool, so the newly added card's view (already spawned and
+            // tweening in StartPlayCardFlyAnimation) is not destroyed. Hand views are
+            // re-rendered, removing the played card.
             UpdateShaderGlobals();
             gameView.Refresh();
 
-            // Step 4: Resolve any pending decision
+            // Step 5: Resolve any pending decision
             if (_state.PendingDecision != null)
             {
                 yield return ResolvePendingDecisionRoutine(player);
             }
 
-            // Step 5: Advance turn and refresh
+            // Step 6: Advance turn and refresh
             AdvanceTurn();
             UpdateShaderGlobals();
             gameView.Refresh();

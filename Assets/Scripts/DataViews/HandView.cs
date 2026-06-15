@@ -84,13 +84,32 @@ namespace DataViews
             ApplyCurrentDimState(player, state);
         }
 
+        // WORLD TRANSFORM QUERY
+
+        /// <summary>
+        /// Returns the world position and rotation of the CardView currently bound to
+        /// <paramref name="card"/>, or null if no such view exists. Used by the play-card
+        /// animation to determine where and at what angle the card was sitting in the hand
+        /// before the hand is re-rendered.
+        /// </summary>
+        public (Vector3 position, Quaternion rotation)? GetCardWorldTransform(Card card)
+        {
+            var view = _cardViews.FirstOrDefault(cv => cv.Card == card);
+            if (view == null)
+            {
+                return null;
+            }
+
+            return (view.transform.position, view.transform.rotation);
+        }
+
         // DEAL LAND ANIMATION
 
         /// <summary>
-        /// Spawns card views for <paramref name="cards"/> at their final layout positions
-        /// plus CeilingHeight on the Y axis, then tweens each one downward to its rest
-        /// position, staggered by LandStaggerInterval seconds, easing out (starts fast,
-        /// decelerates into the landing position).
+        /// Spawns card views for <paramref name="player.Hand"/> at their final layout
+        /// positions plus CeilingHeight on the Y axis, then tweens each one downward to
+        /// its rest position, staggered by LandStaggerInterval seconds, easing out
+        /// (starts fast, decelerates into the landing position).
         ///
         /// Called by PlayerView during the deal animation phase. At the point this runs,
         /// the hand data model is already populated (GameManager dealt into it before

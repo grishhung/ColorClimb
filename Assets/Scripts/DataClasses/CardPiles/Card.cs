@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DataClasses.CardEffects;
 using DataClasses.Enums;
+using UnityEngine;
 
 namespace DataClasses.CardPiles
 {
@@ -32,6 +33,15 @@ namespace DataClasses.CardPiles
         // Used for things like keeping track of random rotation, modifier mapping, etc.
         public Guid Guid;
 
+        // DISCARD PILE CACHED LAYOUT
+        // Computed once when the card is first laid out in the discard pile and
+        // reused on every subsequent render; avoids re-seeding the PRNG each frame.
+        // Null means the values have not been baked yet (card has never been in the
+        // discard pile, or it was reset via ResetDiscardLayout).
+
+        public float? CachedDiscardRotation;
+        public Vector2? CachedDiscardDisplacement;
+
         public Card(Suit suit, Rank rank, bool isStartingCard, params CardEffect[] effects)
         {
             OriginalSuit = suit;
@@ -52,6 +62,17 @@ namespace DataClasses.CardPiles
         {
             ActiveSuit = OriginalSuit;
             ActiveRank = OriginalRank;
+        }
+
+        /// <summary>
+        /// Clears the cached discard-pile layout values so they will be recomputed
+        /// the next time the card is laid out in the discard pile. Call this
+        /// alongside ResetActiveState() during a reshuffle.
+        /// </summary>
+        public void ResetDiscardLayout()
+        {
+            CachedDiscardRotation    = null;
+            CachedDiscardDisplacement = null;
         }
 
         public override string ToString()

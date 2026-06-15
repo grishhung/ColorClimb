@@ -51,6 +51,17 @@ namespace DataViews
             handView.ApplyCurrentDimState(_player, _state);
         }
 
+        // WORLD TRANSFORM QUERY PASS-THROUGH
+
+        /// <summary>
+        /// Returns the world position and rotation of the view currently bound to
+        /// <paramref name="card"/> in this player's hand, or null if no view exists.
+        /// </summary>
+        public (Vector3 position, Quaternion rotation)? GetCardWorldTransform(Card card)
+        {
+            return handView.GetCardWorldTransform(card);
+        }
+
         // DEAL ANIMATION PASS-THROUGH
 
         /// <summary>

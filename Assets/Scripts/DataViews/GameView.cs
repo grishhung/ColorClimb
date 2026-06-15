@@ -137,6 +137,54 @@ namespace DataViews
             onComplete?.Invoke();
         }
 
+        // PLAY-CARD FLY ANIMATION
+
+        /// <summary>
+        /// Returns the world position and rotation of <paramref name="card"/> in
+        /// <paramref name="player"/>'s hand view before the hand is re-rendered, or the
+        /// discard pile's transform as a fallback. Call this before the state mutation.
+        /// </summary>
+        public (Vector3 position, Quaternion rotation) GetCardWorldTransform(Player player, Card card)
+        {
+            foreach (var pv in _playerViews)
+            {
+                if (pv.Player != player)
+                {
+                    continue;
+                }
+
+                var t = pv.GetCardWorldTransform(card);
+                if (t.HasValue)
+                {
+                    return t.Value;
+                }
+
+                break;
+            }
+
+            return (discardPileView.transform.position, discardPileView.transform.rotation);
+        }
+
+        /// <summary>
+        /// Launches the fly animation that moves <paramref name="card"/> from
+        /// <paramref name="startTransform"/> to its rest position in the discard pile.
+        /// The card must already be committed to the discard pile in the data model.
+        ///
+        /// The coroutine is fire-and-forget and does not block gameplay.
+        /// </summary>
+        public void StartPlayCardFlyAnimation(
+            Card card,
+            (Vector3 position, Quaternion rotation) startTransform,
+            GameState state)
+        {
+            StartCoroutine(discardPileView.PlayCardFlyAnimation(
+                card,
+                startTransform.position,
+                startTransform.rotation,
+                state,
+                tooltipView));
+        }
+
         // PICKER PANELS
 
         /// <summary>
