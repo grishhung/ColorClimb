@@ -159,7 +159,7 @@ namespace DataViews
                 // sits undisturbed for the lifetime of the card view.
                 cardViewTransform.localEulerAngles = new Vector3(0f, 0f, 180f);
 
-                cardView.SetRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
+                cardView.SnapRestState(cardViewTransform.localPosition, cardViewTransform.localScale);
 
                 // A card is clickable when actions are allowed and it's either
                 // a floating (pending-draw) card or the lone top card in normal play.

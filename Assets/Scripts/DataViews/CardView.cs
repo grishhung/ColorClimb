@@ -9,8 +9,10 @@ namespace DataViews
     /// <summary>
     /// Manages all visual state for a single card GameObject.
     ///
-    /// Transform compositing; the final localPosition is the sum of three independent layers:
-    ///   _basePosition    : the layout anchor assigned by the parent view; never changes at runtime
+    /// Transform compositing; the final localPosition is the sum of four independent layers:
+    ///   _basePosition    : the layout anchor assigned by the parent view
+    ///   _slideOffset     : decays to zero over PositionSlideDuration when the layout anchor moves,
+    ///                      producing a smooth ease in-out slide to the new position
     ///   _animationOffset : written each animation tick (e.g. jiggle, deal); XZ for jiggle, Y for deal
     ///   _hoverOffset     : applied while the cursor is over the card; always Y-only
     ///
@@ -44,14 +46,25 @@ namespace DataViews
         private float _dimFadeStartAmount = 1f;
         private float _dimFadeProgress = 1f;
 
+        private const float PositionSlideDuration = 0.25f;
+
         // Transform layer 1: layout anchor (set by parent, read-only at runtime)
         private Vector3 _basePosition;
         private Vector3 _baseScale;
 
-        // Transform layer 2: animation offset (XZ for jiggle; Y for deal lift/land)
+        // Transform layer 2: position slide; decays toward zero so the card eases
+        // in-out from its previous position to the new layout anchor.
+        // _slideProgress tracks 0-1 progress; _slideStartOffset is the offset recorded
+        // at the moment SlideToRestState was called so reversals start from the current
+        // visual position rather than jumping.
+        private Vector3 _slideOffset;
+        private Vector3 _slideStartOffset;
+        private float _slideProgress = 1f;
+
+        // Transform layer 3: animation offset (XZ for jiggle; Y for deal lift/land)
         private Vector3 _animationOffset;
 
-        // Transform layer 3: hover lift (Y only)
+        // Transform layer 4: hover lift (Y only)
         private Vector3 _hoverOffset;
 
         // Hover scale multiplier (applied on top of _baseScale when hovering)
@@ -76,6 +89,7 @@ namespace DataViews
         {
             TickJiggle();
             TickDimFade();
+            TickSlide();
             FlushTransform();
         }
 
@@ -201,17 +215,69 @@ namespace DataViews
         }
 
         /// <summary>
-        /// Called by the parent view after it has positioned this card.
-        /// Records the layout anchor so all animation and hover layers are relative to it.
+        /// Records a new layout anchor and immediately snaps the card to it with no
+        /// slide animation. Use for initial placement (newly spawned cards, deal
+        /// animation) where there is no meaningful previous position to slide from.
         /// </summary>
-        public void SetRestState(Vector3 position, Vector3 scale)
+        public void SnapRestState(Vector3 position, Vector3 scale)
         {
             _basePosition = position;
-            _baseScale = scale;
+            _baseScale    = scale;
+
+            _slideOffset      = Vector3.zero;
+            _slideStartOffset = Vector3.zero;
+            _slideProgress    = 1f;
 
             // Reset transient layers so a re-layout starts clean
             _animationOffset = Vector3.zero;
-            _hoverOffset = Vector3.zero;
+            _hoverOffset     = Vector3.zero;
+            _hoverScaleMultiplier = 1f;
+        }
+
+        /// <summary>
+        /// Records a new layout anchor and begins a smoothstep slide from the card's
+        /// current visual position. Use when an existing card's slot changes (e.g. a
+        /// sibling was played) so it glides to its new position rather than snapping.
+        ///
+        /// Interrupts any in-progress slide gracefully; the new slide starts from
+        /// wherever the card currently appears on screen.
+        /// </summary>
+        public void SlideToRestState(Vector3 position, Vector3 scale)
+        {
+            // Capture the card's current visual base position (base + any in-progress
+            // slide) before reassigning _basePosition. Animation and hover layers are
+            // excluded because they are reset below and should not contribute to the
+            // slide starting point.
+            var oldVisualBase = _basePosition + _slideOffset;
+
+            _basePosition = position;
+            _baseScale    = scale;
+
+            // The slide must make the card appear to still be at oldVisualBase while
+            // _basePosition is now at the new target. The required starting offset is
+            // therefore the vector from the new base back to the old visual position.
+            var requiredStartOffset = oldVisualBase - _basePosition;
+
+            // If there is no meaningful distance to cover, skip the tween entirely.
+            if (requiredStartOffset == Vector3.zero)
+            {
+                _slideOffset      = Vector3.zero;
+                _slideStartOffset = Vector3.zero;
+                _slideProgress    = 1f;
+            }
+            else
+            {
+                // Start the slide from the full required offset so the card appears to
+                // glide from its old slot to the new one. Continuous even when
+                // interrupted mid-tween, since oldVisualBase already accounts for any
+                // in-progress slide at the time of the interruption.
+                _slideStartOffset = requiredStartOffset;
+                _slideOffset      = requiredStartOffset;
+                _slideProgress    = 0f;
+            }
+
+            _animationOffset      = Vector3.zero;
+            _hoverOffset          = Vector3.zero;
             _hoverScaleMultiplier = 1f;
         }
 
@@ -251,8 +317,25 @@ namespace DataViews
         /// </summary>
         private void FlushTransform()
         {
-            gameObject.transform.localPosition = _basePosition + _animationOffset + _hoverOffset;
+            gameObject.transform.localPosition = _basePosition + _slideOffset + _animationOffset + _hoverOffset;
             gameObject.transform.localScale = _baseScale * _hoverScaleMultiplier;
+        }
+
+        // POSITION SLIDE ANIMATION
+
+        private void TickSlide()
+        {
+            if (_slideProgress >= 1f)
+            {
+                return;
+            }
+
+            _slideProgress = Mathf.Clamp01(_slideProgress + Time.deltaTime / PositionSlideDuration);
+
+            // Smoothstep ease in-out: 3t^2 - 2t^3
+            var eased = _slideProgress * _slideProgress * (3f - 2f * _slideProgress);
+
+            _slideOffset = Vector3.Lerp(_slideStartOffset, Vector3.zero, eased);
         }
 
         // DIM FADE ANIMATION

@@ -75,7 +75,7 @@ namespace DataViews
             _viewByCard[startingCard] = cardView;
             _orderedCards.Add(startingCard);
 
-            // Bake the final rest transform into the card view so SetRestState records
+            // Bake the final rest transform into the card view so SnapRestState records
             // _basePosition. BakeLayout does this without touching dim/hover.
             BakeLayout(state);
 
@@ -188,11 +188,11 @@ namespace DataViews
                 yield return null;
             }
 
-            // Snap to exact rest transform and sync SetRestState so hover/jiggle layers
+            // Snap to exact rest transform and sync SnapRestState so hover/jiggle layers
             // are relative to the correct anchor.
             cardView.transform.position = restWorldPos;
             cardView.transform.rotation = restWorldRot;
-            cardView.SetRestState(cardView.transform.localPosition, cardView.transform.localScale);
+            cardView.SnapRestState(cardView.transform.localPosition, cardView.transform.localScale);
         }
 
         /// <summary>
@@ -281,7 +281,7 @@ namespace DataViews
                 cardView.transform.position    += new Vector3(0f, individualSpacing * i, 0f);
                 cardView.transform.eulerAngles += Vector3.up * card.CachedDiscardRotation.Value;
 
-                cardView.SetRestState(cardView.transform.localPosition, cardView.transform.localScale);
+                cardView.SnapRestState(cardView.transform.localPosition, cardView.transform.localScale);
             }
         }
 

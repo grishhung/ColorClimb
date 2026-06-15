@@ -39,7 +39,12 @@ namespace DataViews
         // Fired when this hand is chosen as a swap target.
         public event Action HandClicked;
 
-        private readonly List<CardView> _cardViews = new();
+        // Persistent card view pool; keyed by Card so views survive Render() calls
+        // and can slide to their new positions rather than snapping.
+        private readonly Dictionary<Card, CardView> _viewByCard = new();
+
+        // Card order as of the most recent Render(); drives Layout() slot assignment.
+        private readonly List<Card> _orderedCards = new();
 
         // SWAP-PICKER STATE
 
@@ -66,17 +71,34 @@ namespace DataViews
         public void Render(Player player, GameState state, TooltipView tooltipView)
         {
             _tooltipView = tooltipView;
-            Clear();
 
             var isCurrentPlayersTurn = state.Players[state.CurrentPlayerIndex] == player;
-            var cards = GetSortedCards(player.Hand);
-            foreach (var card in cards)
+            var newCards = GetSortedCards(player.Hand).ToList();
+            var newCardSet = new HashSet<Card>(newCards);
+
+            // Destroy views for cards that left the hand
+            var toRemove = _viewByCard.Keys.Where(c => !newCardSet.Contains(c)).ToList();
+            foreach (var card in toRemove)
             {
+                var view = _viewByCard[card];
+                view.Selected -= OnCardClicked;
+                Destroy(view.gameObject);
+                _viewByCard.Remove(card);
+            }
+
+            // Create views for cards that are new to the hand
+            foreach (var card in newCards)
+            {
+                if (_viewByCard.ContainsKey(card))
+                {
+                    continue;
+                }
+
                 var view = Instantiate(cardPrefab, cardParent);
                 view.Bind(card);
 
-                // Snap to the correct dim state before the view is ever rendered so
-                // there is no single-frame flash at full brightness.
+                // Snap dim before the view is ever rendered; no meaningful previous
+                // state exists for a brand-new card view.
                 var shouldDim = !isCurrentPlayersTurn && !GameRules.CanPlay(player, card, state);
                 view.SnapDimmed(shouldDim);
 
@@ -84,14 +106,16 @@ namespace DataViews
                 view.Selected += _ => tooltipView.Hide();
                 view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
                 view.MouseExited += _ => tooltipView.Hide();
-                _cardViews.Add(view);
+
+                _viewByCard[card] = view;
             }
 
-            Layout();
-            // ApplyCurrentDimState still runs so that any subsequent SetDimmed calls
-            // (e.g. from a state change between Render and the next frame) are correct;
-            // because the state hasn't changed since we snapped above, these SetDimmed
-            // calls will find the target already matches and produce no visible transition.
+            _orderedCards.Clear();
+            _orderedCards.AddRange(newCards);
+
+            // Slide surviving cards to their new slots; snap brand-new ones
+            Layout(snapAll: false);
+            // ApplyCurrentDimState still runs so subsequent SetDimmed calls are correct.
             ApplyCurrentDimState(player, state);
         }
 
@@ -105,8 +129,7 @@ namespace DataViews
         /// </summary>
         public (Vector3 position, Quaternion rotation)? GetCardWorldTransform(Card card)
         {
-            var view = _cardViews.FirstOrDefault(cv => cv.Card == card);
-            if (view == null)
+            if (!_viewByCard.TryGetValue(card, out var view))
             {
                 return null;
             }
@@ -132,7 +155,7 @@ namespace DataViews
         public IEnumerator PlayDealLandAnimation(Player player, GameState state, TooltipView tooltipView)
         {
             _tooltipView = tooltipView;
-            Clear();
+            ClearAll();
 
             var cards = GetSortedCards(player.Hand).ToList();
 
@@ -150,7 +173,7 @@ namespace DataViews
                 var restPos = layoutPositions[i].position;
                 view.transform.localPosition = restPos;
                 view.transform.localEulerAngles = layoutPositions[i].rotation;
-                view.SetRestState(restPos, view.transform.localScale);
+                view.SnapRestState(restPos, view.transform.localScale);
                 view.SetAnimationYOffset(DrawPileView.CeilingHeight);
                 view.SetCanHover(false);
                 view.SnapDimmed(true);
@@ -162,14 +185,16 @@ namespace DataViews
                 view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
                 view.MouseExited += _ => tooltipView.Hide();
 
-                _cardViews.Add(view);
+                _viewByCard[cards[i]] = view;
+                _orderedCards.Add(cards[i]);
             }
 
             var tweensFinished = 0;
+            var totalCards = _orderedCards.Count;
 
-            for (var i = 0; i < _cardViews.Count; i++)
+            for (var i = 0; i < _orderedCards.Count; i++)
             {
-                var cardView = _cardViews[i];
+                var cardView = _viewByCard[_orderedCards[i]];
                 var delay = i * LandStaggerInterval;
 
                 StartCoroutine(LandCardTween(cardView, delay, () =>
@@ -178,7 +203,7 @@ namespace DataViews
                 }));
             }
 
-            yield return new WaitUntil(() => tweensFinished >= _cardViews.Count);
+            yield return new WaitUntil(() => tweensFinished >= totalCards);
         }
 
         /// <summary>
@@ -214,21 +239,46 @@ namespace DataViews
 
         // LAYOUT HELPERS
 
-        private void Layout()
+        /// <param name="snapAll">
+        /// When true, all cards snap to their new positions immediately (used during
+        /// the deal animation and other cases where views are brand new or invisible).
+        /// When false, surviving cards slide and only newly created cards snap.
+        /// </param>
+        private void Layout(bool snapAll)
         {
-            if (_cardViews.Count == 0)
+            if (_orderedCards.Count == 0)
             {
                 return;
             }
 
-            var positions = ComputeLayoutPositions(_cardViews.Count);
+            var positions = ComputeLayoutPositions(_orderedCards.Count);
 
-            for (var i = 0; i < _cardViews.Count; i++)
+            for (var i = 0; i < _orderedCards.Count; i++)
             {
-                _cardViews[i].transform.localPosition = positions[i].position;
-                _cardViews[i].transform.localEulerAngles = positions[i].rotation;
-                _cardViews[i].SetRestState(_cardViews[i].transform.localPosition, _cardViews[i].transform.localScale);
-                _cardViews[i].SetCanHover(true);
+                if (!_viewByCard.TryGetValue(_orderedCards[i], out var cardView))
+                {
+                    continue;
+                }
+
+                var targetLocalPos = positions[i].position;
+                var targetLocalRot = positions[i].rotation;
+
+                cardView.transform.localEulerAngles = targetLocalRot;
+
+                if (snapAll)
+                {
+                    cardView.transform.localPosition = targetLocalPos;
+                    cardView.SnapRestState(targetLocalPos, cardView.transform.localScale);
+                }
+                else
+                {
+                    // SlideToRestState reads the card's current visual position to
+                    // compute the slide offset, so we must NOT move the transform
+                    // before calling it; the card slides from where it currently appears.
+                    cardView.SlideToRestState(targetLocalPos, cardView.transform.localScale);
+                }
+
+                cardView.SetCanHover(true);
             }
         }
 
@@ -274,15 +324,16 @@ namespace DataViews
             CardClicked?.Invoke(view.Card);
         }
 
-        private void Clear()
+        private void ClearAll()
         {
-            foreach (var view in _cardViews)
+            foreach (var view in _viewByCard.Values)
             {
                 view.Selected -= OnCardClicked;
                 Destroy(view.gameObject);
             }
 
-            _cardViews.Clear();
+            _viewByCard.Clear();
+            _orderedCards.Clear();
         }
 
         private IEnumerable<Card> GetSortedCards(CardPile hand)
@@ -293,10 +344,10 @@ namespace DataViews
         public void ApplyCurrentDimState(Player player, GameState state)
         {
             var isCurrentPlayersTurn = state.Players[state.CurrentPlayerIndex] == player;
-            foreach (var cardView in _cardViews)
+            foreach (var (card, cardView) in _viewByCard)
             {
                 // TODO: Make the "unplayable" visual different between active and inactive players
-                cardView.SetDimmed(!isCurrentPlayersTurn && !GameRules.CanPlay(player, cardView.Card, state));
+                cardView.SetDimmed(!isCurrentPlayersTurn && !GameRules.CanPlay(player, card, state));
             }
         }
 
@@ -317,7 +368,7 @@ namespace DataViews
             if (isSource)
             {
                 // Dim all cards and prevent any interaction.
-                foreach (var cv in _cardViews)
+                foreach (var cv in _viewByCard.Values)
                 {
                     cv.SetDimmed(true);
                     cv.SetCanHover(false);
@@ -329,7 +380,7 @@ namespace DataViews
             else
             {
                 // Undim all cards and wire group-hover + hand-click callbacks.
-                foreach (var cv in _cardViews)
+                foreach (var cv in _viewByCard.Values)
                 {
                     cv.SetDimmed(false);
                     cv.SetHoverState(false);
@@ -364,7 +415,7 @@ namespace DataViews
             _swapRole = SwapRole.None;
             _swapMouseDown = false;
 
-            foreach (var cv in _cardViews)
+            foreach (var cv in _viewByCard.Values)
             {
                 // Remove swap callbacks.
                 cv.MouseEntered -= OnSwapCandidateCardEntered;
@@ -424,7 +475,7 @@ namespace DataViews
 
         private void SetAllCardsGroupHovered(bool hovered)
         {
-            foreach (var cv in _cardViews)
+            foreach (var cv in _viewByCard.Values)
             {
                 cv.SetHoverState(hovered);
             }
