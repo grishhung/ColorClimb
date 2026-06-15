@@ -1,7 +1,6 @@
 using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardPiles;
 using DataClasses.Enums;
-using UnityEngine;
 
 namespace DataClasses.BusinessLayer
 {
@@ -17,14 +16,12 @@ namespace DataClasses.BusinessLayer
             // Identical cards can always be played regardless of turn order ("jump-ins")
             if (IsJumpIn(player, card, state))
             {
-                Debug.Log("Jump-in allowed");
                 return true;
             }
 
             // Turn enforcement
             if (state.Players[state.CurrentPlayerIndex] != player)
             {
-                Debug.Log("Not your turn");
                 return false;
             }
 

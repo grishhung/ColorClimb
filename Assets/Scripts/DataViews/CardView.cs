@@ -27,12 +27,22 @@ namespace DataViews
 
         private readonly Color _backColor = Color.rebeccaPurple * 1.25f;
         private const float DimAmount = 0.5f;
+        private const float DimFadeDuration = 0.25f;
 
         // Color / interaction state
         private Color _baseColor;
-        private bool _isDimmed;
         private bool _canHover;
         private bool _isHovering;
+
+        // Dim fade state; _dimFadeProgress tracks 0-1 progress along the current fade.
+        // _currentDimAmount is the eased value actually applied to the material each frame.
+        // _dimFadeStartAmount is the dim amount at the moment the most recent fade began,
+        // so reversals mid-fade start from wherever the card currently is visually.
+        // Starts at 1 (fully undimmed) so newly spawned cards don't flash before Bind().
+        private float _currentDimAmount = 1f;
+        private float _targetDimAmount = 1f;
+        private float _dimFadeStartAmount = 1f;
+        private float _dimFadeProgress = 1f;
 
         // Transform layer 1: layout anchor (set by parent, read-only at runtime)
         private Vector3 _basePosition;
@@ -65,6 +75,7 @@ namespace DataViews
         private void Update()
         {
             TickJiggle();
+            TickDimFade();
             FlushTransform();
         }
 
@@ -162,7 +173,30 @@ namespace DataViews
 
         public void SetDimmed(bool dimmed)
         {
-            _isDimmed = dimmed;
+            var newTarget = dimmed ? DimAmount : 1f;
+
+            if (Mathf.Approximately(newTarget, _targetDimAmount))
+            {
+                return;
+            }
+
+            // Start a new fade from wherever the card currently sits visually so
+            // reversals mid-fade don't jump.
+            _targetDimAmount   = newTarget;
+            _dimFadeStartAmount = _currentDimAmount;
+            _dimFadeProgress   = 0f;
+        }
+
+        /// <summary>
+        /// Snaps the dim state immediately without fading; use during initial layout
+        /// so cards don't fade in from the wrong dim state on first appearance.
+        /// </summary>
+        public void SnapDimmed(bool dimmed)
+        {
+            _targetDimAmount    = dimmed ? DimAmount : 1f;
+            _dimFadeStartAmount = _targetDimAmount;
+            _currentDimAmount   = _targetDimAmount;
+            _dimFadeProgress    = 1f;
             ApplyColor();
         }
 
@@ -221,6 +255,25 @@ namespace DataViews
             gameObject.transform.localScale = _baseScale * _hoverScaleMultiplier;
         }
 
+        // DIM FADE ANIMATION
+
+        private void TickDimFade()
+        {
+            if (_dimFadeProgress >= 1f)
+            {
+                return;
+            }
+
+            _dimFadeProgress = Mathf.Clamp01(_dimFadeProgress + Time.deltaTime / DimFadeDuration);
+
+            // Smoothstep (ease in-out): 3t^2 - 2t^3
+            var eased = _dimFadeProgress * _dimFadeProgress * (3f - 2f * _dimFadeProgress);
+
+            _currentDimAmount = Mathf.Lerp(_dimFadeStartAmount, _targetDimAmount, eased);
+
+            ApplyColor();
+        }
+
         // JIGGLE ANIMATION
 
         private void TickJiggle()
@@ -257,33 +310,20 @@ namespace DataViews
         private void ApplyHoverColor()
         {
             // TODO: Add edge highlighting; add separate visual for "illegal card" vs "not your turn"
-            var dimMultiplier = _isDimmed ? DimAmount : 1f;
+            bodyRenderer.material.color = _baseColor * _currentDimAmount * HoverScaleMultiplier;
+            label.color = Color.white * _currentDimAmount;
 
-            bodyRenderer.material.color = _baseColor * dimMultiplier * HoverScaleMultiplier;
-            label.color = Color.white * dimMultiplier;
-
-            backRenderer.material.color = _backColor * dimMultiplier * HoverScaleMultiplier;
-            backLabel.color = Color.white * dimMultiplier;
+            backRenderer.material.color = _backColor * _currentDimAmount * HoverScaleMultiplier;
+            backLabel.color = Color.white * _currentDimAmount;
         }
 
         private void ApplyColor()
         {
-            var finalCardColor = _baseColor;
-            var finalBackColor = _backColor;
-            var finalLabelColor = Color.white;
+            bodyRenderer.material.color = _baseColor * _currentDimAmount;
+            label.color = Color.white * _currentDimAmount;
 
-            if (_isDimmed)
-            {
-                finalCardColor *= DimAmount;
-                finalBackColor *= DimAmount;
-                finalLabelColor *= DimAmount;
-            }
-
-            bodyRenderer.material.color = finalCardColor;
-            label.color = finalLabelColor;
-
-            backRenderer.material.color = finalBackColor;
-            backLabel.color = finalLabelColor;
+            backRenderer.material.color = _backColor * _currentDimAmount;
+            backLabel.color = Color.white * _currentDimAmount;
         }
 
         // STATIC LOOKUP HELPERS

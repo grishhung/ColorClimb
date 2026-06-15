@@ -71,6 +71,11 @@ namespace DataClasses.BusinessLayer
                 return;
             }
 
+            if (GameRules.IsJumpIn(player, card, _state))
+            {
+                Debug.Log("Jump-in allowed");
+            }
+
             StartCoroutine(PlayCardRoutine(player, card));
         }
 

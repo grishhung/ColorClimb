@@ -71,7 +71,7 @@ namespace DataViews
             var cardView = Instantiate(cardPrefab, spawnPoint);
             cardView.Bind(startingCard);
             cardView.SetCanHover(false);
-            cardView.SetDimmed(true);
+            cardView.SnapDimmed(true);
             _viewByCard[startingCard] = cardView;
             _orderedCards.Add(startingCard);
 

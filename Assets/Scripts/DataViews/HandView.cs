@@ -68,11 +68,18 @@ namespace DataViews
             _tooltipView = tooltipView;
             Clear();
 
+            var isCurrentPlayersTurn = state.Players[state.CurrentPlayerIndex] == player;
             var cards = GetSortedCards(player.Hand);
             foreach (var card in cards)
             {
                 var view = Instantiate(cardPrefab, cardParent);
                 view.Bind(card);
+
+                // Snap to the correct dim state before the view is ever rendered so
+                // there is no single-frame flash at full brightness.
+                var shouldDim = !isCurrentPlayersTurn && !GameRules.CanPlay(player, card, state);
+                view.SnapDimmed(shouldDim);
+
                 view.Selected += OnCardClicked;
                 view.Selected += _ => tooltipView.Hide();
                 view.MouseEntered += cv => tooltipView.Show(cv.Card, player, state, Mouse.current.position.ReadValue());
@@ -81,6 +88,10 @@ namespace DataViews
             }
 
             Layout();
+            // ApplyCurrentDimState still runs so that any subsequent SetDimmed calls
+            // (e.g. from a state change between Render and the next frame) are correct;
+            // because the state hasn't changed since we snapped above, these SetDimmed
+            // calls will find the target already matches and produce no visible transition.
             ApplyCurrentDimState(player, state);
         }
 
@@ -142,7 +153,7 @@ namespace DataViews
                 view.SetRestState(restPos, view.transform.localScale);
                 view.SetAnimationYOffset(DrawPileView.CeilingHeight);
                 view.SetCanHover(false);
-                view.SetDimmed(true);
+                view.SnapDimmed(true);
 
                 // Wire events; the card is not interactive yet but we wire now so Render()
                 // is not required again after the animation finishes

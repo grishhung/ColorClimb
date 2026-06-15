@@ -165,7 +165,9 @@ namespace DataViews
                 // a floating (pending-draw) card or the lone top card in normal play.
                 var isClickable = state.ActionsAllowed && (isFloating || i == _cardViews.Count - 1);
 
-                cardView.SetDimmed(!isClickable);
+                // Views are always freshly created when Layout() runs; snap so
+                // there is no single-frame flash at full brightness on a dimmed card.
+                cardView.SnapDimmed(!isClickable);
                 cardView.SetCanHover(isClickable);
             }
 
