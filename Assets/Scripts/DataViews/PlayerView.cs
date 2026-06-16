@@ -46,6 +46,18 @@ namespace DataViews
             handView.Render(_player, _state, _tooltipView);
         }
 
+        // FLIP CONFIGURATION
+
+        /// <summary>
+        /// Passes through to HandView.SetFlipCards. Call once at bind time from
+        /// GameView for player 3, whose hand should read right-side-up from the
+        /// opposite side of the table.
+        /// </summary>
+        public void SetFlipCards(bool flip)
+        {
+            handView.SetFlipCards(flip);
+        }
+
         public void ApplyCurrentDimState()
         {
             handView.ApplyCurrentDimState(_player, _state);

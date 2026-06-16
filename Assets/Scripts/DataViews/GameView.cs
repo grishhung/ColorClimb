@@ -42,6 +42,14 @@ namespace DataViews
                 view.Bind(player, _state, tooltipView);
                 view.CardClicked += OnCardClicked;
 
+                // Player 3 (index 2) sits across the table; flip cards 180 degrees on
+                // the Y axis so their faces read right-side-up from the IRL player's
+                // perspective.
+                if (i == 2)
+                {
+                    view.SetFlipCards(true);
+                }
+
                 _playerViews.Add(view);
             }
 

@@ -59,12 +59,29 @@ namespace DataViews
 
         private const string SwapTooltipText = "Swap to this adventurer's hand.";
 
+        // When true, each card's base rotation is flipped 180 degrees on the Y axis so
+        // that the face of the card reads right-side-up from the opposite side of the table.
+        // Set once at bind time by GameView for player 3.
+        private bool _flipCards;
+
         // Duration for a single card's land tween.
         private const float LandTweenDuration = 0.3f;
 
         // Stagger between the start of each card's land tween.
         // Public so GameView can compute per-player delays from the same value.
         public const float LandStaggerInterval = 0.05f;
+
+        // CONFIGURATION
+
+        /// <summary>
+        /// When called with true, every card's base rotation is flipped 180 degrees
+        /// on the Y axis in ComputeLayoutPositions. Call once at bind time from GameView
+        /// for player 3, whose hand faces the opposite side of the table.
+        /// </summary>
+        public void SetFlipCards(bool flip)
+        {
+            _flipCards = flip;
+        }
 
         // RENDERING
 
@@ -328,7 +345,8 @@ namespace DataViews
                 var z = fanRadius * Mathf.Sin(radians) - fanRadius;
 
                 var position = new Vector3(-x, 0, z);
-                var rotation = new Vector3(0, angle, cardTilt);
+                var yRotation = _flipCards ? angle + 180f : angle;
+                var rotation = new Vector3(0, yRotation, cardTilt);
 
                 result.Add((position, rotation));
             }
