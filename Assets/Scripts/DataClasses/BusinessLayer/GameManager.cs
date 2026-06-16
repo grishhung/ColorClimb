@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using DataClasses.BusinessLayer.PendingDecisions;
 using DataClasses.CardEffects;
 using DataClasses.CardPiles;
@@ -175,7 +176,10 @@ namespace DataClasses.BusinessLayer
             // Step 2: Read the hand card's world transform now, before Refresh destroys
             // the hand views. We capture both position and rotation while the view still
             // exists, then pass them to the fly animation after the state mutation.
+            // We also capture all hand world positions so that if the played card triggers
+            // a hand swap (7) or rotation (0), we can animate cards flying between anchors.
             var cardStartTransform = gameView.GetCardWorldTransform(player, card);
+            var allHandPositionsBefore = gameView.CaptureAllHandWorldPositions();
 
             // Step 3: Apply the card to game state (removes it from hand; for non-wilds,
             // adds it to the discard pile immediately)
@@ -200,10 +204,12 @@ namespace DataClasses.BusinessLayer
                 yield return ResolvePendingDecisionRoutine(player);
             }
 
-            // Step 6: Advance turn and refresh
+            // Step 6: Advance turn and refresh; if the played card moved cards between
+            // hands (swap or rotate), animate them flying from their old world positions
+            // and block input until the animation completes.
             AdvanceTurn();
             UpdateShaderGlobals();
-            gameView.Refresh();
+            yield return gameView.RefreshWithHandTransferAnimation(allHandPositionsBefore);
         }
 
         // DRAW-CARD COROUTINE

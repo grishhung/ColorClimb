@@ -62,6 +62,29 @@ namespace DataViews
             return handView.GetCardWorldTransform(card);
         }
 
+        // TRANSFER ANIMATION DIM PASS-THROUGH
+
+        /// <summary>
+        /// Dims or undims every card in this hand unconditionally. Used during hand
+        /// transfer animations to signal that input is paused.
+        /// </summary>
+        public void SetAllDimmed(bool dimmed)
+        {
+            handView.SetAllDimmed(dimmed);
+        }
+
+        // HAND TRANSFER ANIMATION PASS-THROUGH
+
+        /// <summary>
+        /// Tells the CardView bound to <paramref name="card"/> to slide in from
+        /// <paramref name="worldPosition"/>. Call after Refresh() has created the new
+        /// view at its rest position so the slide goes from old world pos to new rest.
+        /// </summary>
+        public void SlideCardFromWorldPosition(Card card, Vector3 worldPosition)
+        {
+            handView.SlideCardFromWorldPosition(card, worldPosition);
+        }
+
         // DEAL ANIMATION PASS-THROUGH
 
         /// <summary>

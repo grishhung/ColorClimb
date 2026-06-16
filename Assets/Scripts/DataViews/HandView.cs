@@ -119,6 +119,23 @@ namespace DataViews
             ApplyCurrentDimState(player, state);
         }
 
+        // HAND TRANSFER ANIMATION
+
+        /// <summary>
+        /// Finds the CardView bound to <paramref name="card"/> and calls
+        /// SlideFromWorldPosition on it so it animates in from the given world position.
+        /// The view must already exist at its rest position (i.e. Render() has run).
+        /// </summary>
+        public void SlideCardFromWorldPosition(Card card, Vector3 worldPosition)
+        {
+            if (!_viewByCard.TryGetValue(card, out var view))
+            {
+                return;
+            }
+
+            view.SlideFromWorldPosition(worldPosition);
+        }
+
         // WORLD TRANSFORM QUERY
 
         /// <summary>
@@ -348,6 +365,22 @@ namespace DataViews
             {
                 // TODO: Make the "unplayable" visual different between active and inactive players
                 cardView.SetDimmed(!isCurrentPlayersTurn && !GameRules.CanPlay(player, card, state));
+            }
+        }
+
+        // TRANSFER ANIMATION DIM
+
+        /// <summary>
+        /// Dims or undims every card in the hand unconditionally, overriding the normal
+        /// per-card playability logic. Used during hand transfer animations to signal
+        /// that input is paused.
+        /// </summary>
+        public void SetAllDimmed(bool dimmed)
+        {
+            foreach (var cv in _viewByCard.Values)
+            {
+                cv.SetDimmed(dimmed);
+                cv.SetCanHover(!dimmed);
             }
         }
 

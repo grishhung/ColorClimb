@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using DataClasses.BusinessLayer;
@@ -135,6 +136,114 @@ namespace DataViews
             yield return playerView.PlayDealLandAnimation(state, tooltipView);
 
             onComplete?.Invoke();
+        }
+
+        // HAND TRANSFER ANIMATION
+
+        /// <summary>
+        /// Captures the current world position of every card across all hand views,
+        /// keyed by Card. Call this before any state mutation that will move cards
+        /// between hands (swap or rotate) so their pre-mutation positions are available
+        /// to drive the post-mutation slide animations.
+        /// </summary>
+        public Dictionary<Card, Vector3> CaptureAllHandWorldPositions()
+        {
+            var result = new Dictionary<Card, Vector3>();
+
+            foreach (var pv in _playerViews)
+            {
+                foreach (var card in pv.Player.Hand.Cards)
+                {
+                    var t = pv.GetCardWorldTransform(card);
+                    if (t.HasValue)
+                    {
+                        result[card] = t.Value.position;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Calls Refresh() so all hand views reconcile to the post-mutation state,
+        /// then for every card whose world position changed (i.e. it moved to a
+        /// different player's hand), drives its new view to slide in from the
+        /// captured pre-mutation world position.
+        ///
+        /// Cards whose position didn't change (same player, same slot) still go
+        /// through the normal SlideToRestState path inside HandView.Layout(), so
+        /// they also animate if their fan slot shifted.
+        /// </summary>
+        /// <summary>
+        /// Calls Refresh() so all hand views reconcile to the post-mutation state,
+        /// then for every card that moved to a different player's hand, drives its new
+        /// view to slide in from the captured pre-mutation world position.
+        ///
+        /// Blocks input for the duration of the slide by setting
+        /// GameState.IsHandTransferAnimating, then clearing it once the animation
+        /// completes. Yields until the animation is done.
+        /// </summary>
+        public IEnumerator RefreshWithHandTransferAnimation(
+            Dictionary<Card, Vector3> worldPositionsBefore)
+        {
+            Refresh();
+
+            // Detect whether any cards actually crossed player boundaries; if none
+            // did (e.g. a 0 was played but the card effects didn't move anything),
+            // skip the block and return immediately.
+            var anyTransferred = false;
+
+            foreach (var pv in _playerViews)
+            {
+                foreach (var card in pv.Player.Hand.Cards)
+                {
+                    if (!worldPositionsBefore.TryGetValue(card, out var oldWorldPos))
+                    {
+                        continue;
+                    }
+
+                    var currentTransform = pv.GetCardWorldTransform(card);
+                    if (!currentTransform.HasValue)
+                    {
+                        continue;
+                    }
+
+                    // If the card's current world position matches the captured one
+                    // (same player, roughly same slot), SlideToRestState already
+                    // handled any intra-hand fan shift; don't double-apply.
+                    if ((currentTransform.Value.position - oldWorldPos).sqrMagnitude < 0.001f)
+                    {
+                        continue;
+                    }
+
+                    // The card moved to a different anchor; slide it in from the old pos.
+                    pv.SlideCardFromWorldPosition(card, oldWorldPos);
+                    anyTransferred = true;
+                }
+            }
+
+            if (!anyTransferred)
+            {
+                yield break;
+            }
+
+            _state.IsHandTransferAnimating = true;
+
+            foreach (var pv in _playerViews)
+            {
+                pv.SetAllDimmed(true);
+            }
+
+            yield return new WaitForSeconds(CardView.PositionSlideDuration);
+
+            _state.IsHandTransferAnimating = false;
+
+            foreach (var pv in _playerViews)
+            {
+                pv.SetAllDimmed(false);
+                pv.ApplyCurrentDimState();
+            }
         }
 
         // PLAY-CARD FLY ANIMATION

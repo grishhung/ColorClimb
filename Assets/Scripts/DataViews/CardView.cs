@@ -46,7 +46,7 @@ namespace DataViews
         private float _dimFadeStartAmount = 1f;
         private float _dimFadeProgress = 1f;
 
-        private const float PositionSlideDuration = 0.25f;
+        public const float PositionSlideDuration = 0.25f;
 
         // Transform layer 1: layout anchor (set by parent, read-only at runtime)
         private Vector3 _basePosition;
@@ -242,6 +242,35 @@ namespace DataViews
         /// Interrupts any in-progress slide gracefully; the new slide starts from
         /// wherever the card currently appears on screen.
         /// </summary>
+        /// <summary>
+        /// Starts a slide from <paramref name="worldPosition"/> to this card's current
+        /// rest position. Used when a card has physically moved to a different player
+        /// anchor (hand swap or rotate) and needs to appear to travel from its old
+        /// world location to its new one, even though the two views have different parents.
+        ///
+        /// Converts <paramref name="worldPosition"/> into this view's local space to
+        /// compute the required starting slide offset.
+        /// </summary>
+        public void SlideFromWorldPosition(Vector3 worldPosition)
+        {
+            // Convert the source world position to this view's local space so the
+            // offset is expressed in the same coordinate system as _basePosition.
+            var localSourcePos = transform.parent != null
+                ? transform.parent.InverseTransformPoint(worldPosition)
+                : worldPosition;
+
+            var requiredStartOffset = localSourcePos - _basePosition;
+
+            if (requiredStartOffset == Vector3.zero)
+            {
+                return;
+            }
+
+            _slideStartOffset = requiredStartOffset;
+            _slideOffset      = requiredStartOffset;
+            _slideProgress    = 0f;
+        }
+
         public void SlideToRestState(Vector3 position, Vector3 scale)
         {
             // Capture the card's current visual base position (base + any in-progress

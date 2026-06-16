@@ -43,6 +43,7 @@ namespace DataClasses.BusinessLayer
         /// pile and landing in players' hands). Gameplay is locked for the full duration.
         /// </summary>
         public bool IsDealAnimating;
+        public bool IsHandTransferAnimating;
 
         public Card TopDiscard => DiscardPile.Cards.Count > 0 ? DiscardPile.Cards[^1] : null;
 
@@ -50,6 +51,6 @@ namespace DataClasses.BusinessLayer
         /// Returns true when the player may interact with cards or the draw pile.
         /// False while a UI decision is awaiting input or a blocking animation is playing.
         /// </summary>
-        public bool ActionsAllowed => PendingDecision == null && !IsDealAnimating;
+        public bool ActionsAllowed => PendingDecision == null && !IsDealAnimating && !IsHandTransferAnimating;
     }
 }
